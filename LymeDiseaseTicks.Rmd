@@ -1,0 +1,757 @@
+---
+title: "Lyme Disease Ticks"
+author: "Janis Corona"
+date: "8/26/2020"
+output: html_document
+---
+
+This data analysis is on lyme disease using GEO series data made readily available in its normalized state from [GSE145974](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE145974) on ncbi.nlm.nih.gov as the accession number. The data is from the [platform GPL13667](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GPL13667) and the [series data](https://ftp.ncbi.nlm.nih.gov/geo/series/GSE145nnn/GSE145974/matrix/). There are also some CEL/TAR files for Ubuntu but I couldn't get my ubuntu machines to recognize it, and the instructions and tutorials for accessing the SRAtoolkit and using the Windows Ubuntu app, didn't avail, so I am using the text files only.If you have a windows 10 tutorial on running SRAtoolkit using the ubuntu app for windows or getting the cel files to work on ubuntu with a VirtualBox disk image of ubuntu that works because you tried it within 24 hours and it worked exactly as explained, please share. I have yet to get those up and running. Possibly the new updates to virtualBox or my other apps, like docker or MongoDB or Tableau are interfering. I am not going to waste time figuring it out, its a time trap.  
+
+All the data was there as far as being filled out with values for the feature names, because I do recall exploring some platforms and series downloadable text files and only the header information was there and none of the values. The method used for processing was expression profiling by microarray on peripheral blood mononucleated cells (PBMC). The values seem to be scaled or normalized already as the values are inclusive of negative values. 
+
+***
+There is a research article available from the researchers on this study to accompany the data for free through [pubMed](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7078463/pdf/mBio.00047-20.pdf):
+
+"Global Transcriptome Analysis Identifies a Diagnostic
+Signature for Early Disseminated Lyme Disease and Its Resolution" authored by the following researchers:
+Mary M. Petzke,a Konstantin Volyanskyy,b Yong Mao,b Byron Arevalo,a Raphael Zohn,a Johanna Quituisaca,a Gary P. Wormser,c Nevenka Dimitrova,b Ira Schwartza
+
+They are with the Department of Microbiology and Immunology, School of Medicine, New York Medical College, Valhalla, New York, USA bPhillips Research North America, Valhalla, New York, USA
+Division of Infectious Diseases, Department of Medicine, New York Medical College, Valhalla, New York, USA
+**Citation** Petzke MM, Volyanskyy K, Mao Y,
+Arevalo B, Zohn R, Quituisaca J, Wormser GP, Dimitrova N, Schwartz I. 2020. Global transcriptome analysis identifies a diagnostic signature for early disseminated Lyme disease and its resolution. mBio 11:e00047-20. https:// doi.org/10.1128/mBio.00047-20.
+Editor Steven J. Norris, McGovern Medical
+School
+Copyright © 2020 Petzke et al. This is an openaccess article distributed under the terms of the Creative Commons Attribution 4.0 International license.
+Address correspondence to Mary M. Petzke, mpetzke@nymc.edu.
+This article is a direct contribution from Ira Schwartz, a Fellow of the American Academy of Microbiology, who arranged for and secured reviews by Patricia Rosa, NIAID, NIH, and John Leong, Tufts University School of Medicine.
+Received 9 January 2020
+Accepted 31 January 2020 **Published 17 March 2020**
+"**ABSTRACT** A bioinformatics approach was employed to identify transcriptome alterations in the peripheral blood mononuclear cells of well-characterized human subjects who were diagnosed with early disseminated Lyme disease (LD) based on stringent microbiological and clinical criteria. Transcriptomes were assessed at the time of presentation and also at approximately 1 month (early convalescence) and 6 months (late convalescence) after initiation of an appropriate antibiotic regimen. Comparative transcriptomics identified 335 transcripts, representing 233 unique genes, with significant alterations of at least 2-fold expression in acute- or convalescent-phase blood samples from LD subjects relative to healthy donors. Acute-phase blood samples from LD subjects had the largest number of differentially expressed transcripts (187 induced, 54 repressed). This transcriptional profile, which was dominated by interferon-regulated genes, was sustained during early convalescence. 6 months after antibiotic treatment the transcriptome of LD subjects was indistinguishable from that of healthy controls based on two separate methods of analysis. Return of the LD expression profile to levels found in control subjects was concordant with disease outcome; 82% of subjects with LD experienced at least one symptom at the baseline visit compared to 43% at the early convalescence time point and only a single patient (9%) at the 6-month convalescence time point. Using the random forest machine learning algorithm, we developed an efficient computational framework to identify sets of 20 classifier genes that discriminated LD from other bacterial and viral infections. These novel LD biomarkers not only differentiated subjects with acute disseminated LD from healthy controls with 96% accuracy but also distinguished between subjects with acute and resolved (late convalescent) disease with 97% accuracy.
+IMPORTANCE Lyme disease (LD), caused by Borrelia burgdorferi, is the most common tick-borne infectious disease in the United States. We examined gene expression patterns in the blood of individuals with early disseminated LD at the time of diagnosis (acute) and also at approximately 1 month and 6 months following antibiotic treatment. A distinct acute LD profile was observed that was sustained during early convalescence (1 month) but returned to control levels 6 months after treatment. Using a computer learning algorithm, we identified sets of 20 classifier genes that discriminate LD from other bacterial and viral infections. In addition, these novel LD biomarkers are highly accurate in distinguishing patients with acute LD from healthy subjects and in discriminating between individuals with active and resolved infection. This computational approach offers the potential for more accurate diagnosis of early disseminated Lyme disease. It may also allow improved monitoring of treatment efficacy and disease resolution."
+***
+
+The study authors used the same algorithms I always go to for analysis and scored well, random forest. It tends to always perform better in classification. But sometimes other algorithms perform better. Data scientists are suggested to not use just one type for all data as not all data is the same, but also some are almost as good and take much less time, depending on how many trees your algorithm is tuned to. I do want to see if these genes can be discovered that are similar to the genes they discovered and use them to predict samples from other studies, but this data is already normalized, and the method that was used was not given, so the first part of this study is an attempt at bringing back the original raw values. This is RNA blood samples, PBMC, and I do have some COVID-19 samples that are also peripheral Blood mononucleated cells type tissue, but the processing was high throughput expression profiling and not microarray. So, I would be able to split this data and see if it can predict the samples on unseen data of the testing set instead. 
+
+
+```{r}
+library(MASS)
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r}
+ticks <- read.delim('GSE145974_series_matrix.txt',sep='\t',header=T,
+                    comment.char = '!',na.strings=c('',' ','NA'))
+```
+
+```{r}
+GSM_IDs <- colnames(ticks)[2:87]
+Affy_IDs <- ticks$ID_REF
+```
+
+```{r}
+comments <- read.delim('GSE145974_series_matrix.txt',sep='\n',header=T,
+                       na.strings=c('',' ','NA'))
+```
+
+Sample GSM IDs and description
+```{r}
+descriptors <- comments[27:28,]
+head(descriptors)
+```
+
+```{r}
+descriptors <- gsub('!','',descriptors)
+descriptors <- gsub('\\t',',',descriptors)
+
+split1 <- strsplit(descriptors[1],split=',')
+type <- split1[1]
+type2 <- as.data.frame(type)
+colnames(type2) <- 'Sample_Title'
+
+split2 <- strsplit(descriptors[2],split=',')
+gsm <- split2[1]
+gsm2 <- as.data.frame(gsm)
+colnames(gsm2) <- 'Sample_GEO_Accession'
+
+names <- cbind(type2,gsm2)
+names$Sample_Title <- as.character(paste(names$Sample_Title))
+names$Sample_GEO_Accession <- as.character(paste(names$Sample_GEO_Accession))
+names2 <- names[-1,]
+row.names(names2) <- NULL
+```
+
+
+
+```{r}
+write.csv(names2,'descriptors.csv',row.names=F)
+```
+
+```{r}
+descriptors2 <- read.csv('descriptors.csv',sep=',',na.strings=c('',' ','NA'),
+                           header=TRUE)
+head(descriptors2)
+```
+
+
+```{r}
+descriptors2$Sample_Title
+```
+
+```{r}
+descriptors2$classDisease <- c(rep('healthyControl',21),
+                               rep('acuteLymeDisease',28),
+                               rep('Antibodies_1month',27),
+                               rep('Antibodies_6months',10))
+write.csv(descriptors2,'descriptors2.csv',row.names=F)
+descriptors2
+```
+
+```{r}
+platform <- read.delim('GPL13667-15572.txt',sep='\t',header=T,
+                       na.strings=c('',' ','NA'),
+                       comment.char='#')
+```
+
+
+```{r}
+colnames(platform)
+```
+
+```{r}
+platform2 <- platform[,c(1,15)]
+head(platform2,10)
+```
+
+```{r}
+split3 <- strsplit(as.character(platform2$Gene.Symbol),split='///')
+Gene1 <- lapply(split3,'[',1)
+platform2$Gene <- as.character(paste(Gene1))
+platform2$Gene <- trimws(platform2$Gene,which='both',whitespace=' ')
+platform3 <- platform2[,c(1,3)]
+```
+
+
+```{r}
+Lyme <- merge(platform3,ticks,by.x='ID',by.y='ID_REF')
+```
+
+
+```{r}
+head(Lyme,10)
+```
+
+```{r}
+noGeneSymbol <- Lyme[grep('---',Lyme$Gene),]
+platform4 <- platform[,c(1,20)]
+Ensembl <- merge(platform4,noGeneSymbol,by.x='ID',by.y='ID')
+Ensembl2 <- Ensembl[-grep('---',Ensembl$Ensembl),]
+
+string5 <- strsplit(as.character(paste(Ensembl2$Ensembl)),'///')
+Ensembl2$EnsemblID <- as.character(paste(lapply(string5,'[',1)))
+Ensembl3 <- Ensembl2[,c(90,4:89)]
+colnames(Ensembl3)[1] <- 'Gene'
+```
+
+
+```{r}
+LymeDisease <- Lyme[,-1]
+```
+
+Lets combine the Ensembl IDs data frame with the Gene Symbol data frame as they are some of the missing observations of the LymeDisease data frame with the gene symbols missing. Its only 75 out of 600 missing, but still replaces some missing values, and genecards.org will look up either gene symbol and we can grep out the Ensembl IDs with their prepended 'ENSG' ID names.
+```{r}
+LymeDisease2 <- LymeDisease[-grep('---',LymeDisease$Gene),]
+LymeDisease3 <- rbind(LymeDisease2,Ensembl3)
+```
+
+
+```{r}
+write.csv(LymeDisease3,'LymeDisease.csv',row.names=FALSE)
+```
+
+Our data is log2 normalized, and this means it is scaled to be between 0 and 1. There are many different ways to log2 normalize such as each x elements of a sample minus the mean of all x's in the sample, then divided by the standard deviation of all x's in the sample. Or take an element x of a sample then subtract the min(all x's in sample) and divide that by the max(all x's in sample)-min(all x's in sample). To inverse log 2 you just take 2 and raise it to the output y of log2 normalized x. To inverse the normalized method, you reverse the operations. For the first inverse, you would multiply by the std error of x then subtract the mean of x and for the second method you would multiply by the max-min and then add the min. The normalization is done before the log2 according to Dr. Quackenbush on a posted question on biostars. I want to inverse the scaling, because when doing machine learning, the data is supposed to be scaled after splitting the data into training and testing sets. And Affymetrix data has more steps for normalization as well. Lets suppose that the normalization is the second method, because I could get back the original x by converting the decimal to a fraction, but couldn't with the mean and std error method of scaling. Also if a value was zero I added 10^-8 to make it a value log2 would recognize and not quit on.
+
+So, lets assume the formula is log2[(x-min(x))/(max(x)-min(x))]=y, then the inverse would be [2^(y)]*[max(y)-min(y)]+min(y)
+```{r}
+a <- LymeDisease3$GSM4340492
+head(a,10)
+```
+Inverse step 1 to take the base 2 and raise it by y we named A.
+```{r}
+A <- (2^a)
+head(A,10)
+```
+Step 2 of inverse is to inverse the standardization steps that set all values between 0 and 1. But we notice that the values above are not between 0 and 1 so they must not have been normalized with this method. And they likely weren't because Dr. Quackenbush said the values are 'background corrected,''quantile normalized,''probe summarisation (i.e. across transcripts),' and 'log (base 2) transformation.'-www.biostars.org/p/3121133/
+
+
+
+```{r}
+AA <- A*(max(A)-min(A))+min(A)
+head(AA,10)
+```
+Those values don't look extreme, we could try to use the fractional method to get the original values back.
+```{r}
+AAA <- as.fractions(AA)
+head(AAA,10)
+```
+
+Multiply by the maximum value in the list of de-normalized or de-standardized values.The denominators are not all common, We need a common denominator and we might need these fractions to all have common denominators. 
+```{r}
+maxA <- max(AAA)
+A4 <- AAA*maxA
+A5 <- as.numeric(A4)
+head(A5,10)
+```
+Those values are extremely high. We were better at stopping after de-standardizing the inverse log2 of y as our x.
+
+
+
+%%%%%%%%%%%%% demonstration of what was expected %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Let me show you what I expected when using this on a different set of values.
+We start with x having 10 elements, but one is a 0, and then we standardize to fit between 0 and 1.
+```{r}
+x <- c(1,2,3,4,5,5,43,0,23,11)
+x_a <- (x-min(x))/(max(x)-min(x))
+x_a
+```
+
+correct the 0 value for taking the log by adding  a very small value, otherwise it will be a NaN or log error.
+```{r}
+x_b <- x_a+10^-8
+x_b
+```
+```{r}
+y <- log(x_b,2)
+y
+```
+
+The above is y, the log2 normalized output of x.
+
+Lets get x back by reversing the operations.
+```{r}
+x_c <- 2^y
+x_c
+```
+The above is equal to x_b, the normalized value plus the 10^-8 small value.
+```{r}
+x_d <- x_c-0.00000001
+x_d
+```
+Notice that the zero is 10^-24, or a very small value, that is otherwise 0. That could be the size of the tiniest atom. 
+```{r}
+x_e <- x_d*(max(x_d)-min(x_d))+min(x_d)
+x_e
+```
+
+
+
+```{r}
+#library(MASS)
+X <- as.fractions(x_e)
+X
+
+
+```
+
+Notice, because its normalized the values aren't the original values, but the denominator is the max value. We can multiply by that value and get our original values back.
+```{r}
+X2 <- X*43
+x
+X2
+```
+
+We got back the original values using the second normalization method.
+%%%%%%%%%%%%%%%%%%%%%%%%%%% end of demonstration %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+There are 86 samples and we would have to do this to 85 more samples or create a function that will do those steps to each column in our data frame and write it out to a file we can read back in.  We are going to forget about multiplying each entry by the max and just end the inverse log2 normalization after de-normalizing the y output vector assumedly back to x, the input vector. I tried to write a functional for loop to write this out to file, but it returned a long vector, and then when reading it in, the matrix() and the as.matrix() didn't change the 4M+ long vector (48851*86 elements as rows) into the number of rows and columns, it just kept it as a very long vector. Online, the community says that the functions decide on their own. 
+```{r}
+LymeMX <- LymeDisease3[,2:87]
+
+denormalize <- function(datatable){
+  for (i in LymeMX[,1:86]){
+    a <- i
+    A <- 2^a
+    AA <- A*(max(A)-min(A))+min(A)
+  write.table(AA,'lymeMX.csv',sep=',',append=TRUE,col.names=FALSE,row.names=FALSE)
+  }
+}
+```
+
+```{r}
+if (file.exists('lymeMX.csv')){
+  file.remove('lymeMX.csv')
+}
+
+denormalize(LymeMX)
+
+lymeVector <- read.csv('lymeMX.csv',sep=',',header=F)
+```
+
+```{r}
+lymeMatrix <- as.matrix(lymeVector,nrow=48851,ncol=86)
+lymeMatrix2 <- as.matrix(lymeVector,nrow=48851,ncol=86)
+```
+Both matrices are still just one long 4,201,186 X 1 matrix. 
+
+So, we must do this the long way, but technically copy and paste still make it somewhat fast. Just making sure to put in the right indices manually.
+```{r}
+lymeMx <- as.data.frame(LymeDisease3[,1])
+colnames(lymeMx) <- 'gene'
+
+lymeMx$s1 <-2^(LymeDisease3[,2])*(max(2^(LymeDisease3[,2]))-min(2^(LymeDisease3[,2])))+min(2^(LymeDisease3[,2]))
+lymeMx$s2 <-2^(LymeDisease3[,3])*(max(2^(LymeDisease3[,3]))-min(2^(LymeDisease3[,3])))+min(2^(LymeDisease3[,3]))
+lymeMx$s3 <-2^(LymeDisease3[,4])*(max(2^(LymeDisease3[,4]))-min(2^(LymeDisease3[,4])))+min(2^(LymeDisease3[,4]))
+lymeMx$s4 <-2^(LymeDisease3[,5])*(max(2^(LymeDisease3[,5]))-min(2^(LymeDisease3[,5])))+min(2^(LymeDisease3[,5]))
+lymeMx$s5 <-2^(LymeDisease3[,6])*(max(2^(LymeDisease3[,6]))-min(2^(LymeDisease3[,6])))+min(2^(LymeDisease3[,6]))
+lymeMx$s6 <-2^(LymeDisease3[,7])*(max(2^(LymeDisease3[,7]))-min(2^(LymeDisease3[,7])))+min(2^(LymeDisease3[,7]))
+lymeMx$s7 <-2^(LymeDisease3[,8])*(max(2^(LymeDisease3[,8]))-min(2^(LymeDisease3[,8])))+min(2^(LymeDisease3[,8]))
+lymeMx$s8 <-2^(LymeDisease3[,9])*(max(2^(LymeDisease3[,9]))-min(2^(LymeDisease3[,9])))+min(2^(LymeDisease3[,9]))
+lymeMx$s9 <-2^(LymeDisease3[,10])*(max(2^(LymeDisease3[,10]))-min(2^(LymeDisease3[,10])))+min(2^(LymeDisease3[,10]))
+lymeMx$s10 <-2^(LymeDisease3[,11])*(max(2^(LymeDisease3[,11]))-min(2^(LymeDisease3[,11])))+min(2^(LymeDisease3[,11]))
+
+lymeMx$s11 <-2^(LymeDisease3[,12])*(max(2^(LymeDisease3[,12]))-min(2^(LymeDisease3[,12])))+min(2^(LymeDisease3[,12]))
+lymeMx$s12 <-2^(LymeDisease3[,13])*(max(2^(LymeDisease3[,13]))-min(2^(LymeDisease3[,13])))+min(2^(LymeDisease3[,13]))
+lymeMx$s13 <-2^(LymeDisease3[,14])*(max(2^(LymeDisease3[,14]))-min(2^(LymeDisease3[,14])))+min(2^(LymeDisease3[,14]))
+lymeMx$s14 <-2^(LymeDisease3[,15])*(max(2^(LymeDisease3[,15]))-min(2^(LymeDisease3[,15])))+min(2^(LymeDisease3[,15]))
+lymeMx$s15 <-2^(LymeDisease3[,16])*(max(2^(LymeDisease3[,16]))-min(2^(LymeDisease3[,16])))+min(2^(LymeDisease3[,16]))
+lymeMx$s16 <-2^(LymeDisease3[,17])*(max(2^(LymeDisease3[,17]))-min(2^(LymeDisease3[,17])))+min(2^(LymeDisease3[,17]))
+lymeMx$s17 <-2^(LymeDisease3[,18])*(max(2^(LymeDisease3[,18]))-min(2^(LymeDisease3[,18])))+min(2^(LymeDisease3[,18]))
+lymeMx$s18 <-2^(LymeDisease3[,19])*(max(2^(LymeDisease3[,19]))-min(2^(LymeDisease3[,19])))+min(2^(LymeDisease3[,19]))
+lymeMx$s19 <-2^(LymeDisease3[,20])*(max(2^(LymeDisease3[,20]))-min(2^(LymeDisease3[,20])))+min(2^(LymeDisease3[,20]))
+lymeMx$s20 <-2^(LymeDisease3[,21])*(max(2^(LymeDisease3[,21]))-min(2^(LymeDisease3[,21])))+min(2^(LymeDisease3[,21]))
+
+
+lymeMx$s21 <-2^(LymeDisease3[,22])*(max(2^(LymeDisease3[,22]))-min(2^(LymeDisease3[,22])))+min(2^(LymeDisease3[,22]))
+lymeMx$s22 <-2^(LymeDisease3[,23])*(max(2^(LymeDisease3[,23]))-min(2^(LymeDisease3[,23])))+min(2^(LymeDisease3[,23]))
+lymeMx$s23 <-2^(LymeDisease3[,24])*(max(2^(LymeDisease3[,24]))-min(2^(LymeDisease3[,24])))+min(2^(LymeDisease3[,24]))
+lymeMx$s24 <-2^(LymeDisease3[,25])*(max(2^(LymeDisease3[,25]))-min(2^(LymeDisease3[,25])))+min(2^(LymeDisease3[,25]))
+lymeMx$s25 <-2^(LymeDisease3[,26])*(max(2^(LymeDisease3[,26]))-min(2^(LymeDisease3[,26])))+min(2^(LymeDisease3[,26]))
+lymeMx$s26 <-2^(LymeDisease3[,27])*(max(2^(LymeDisease3[,27]))-min(2^(LymeDisease3[,27])))+min(2^(LymeDisease3[,27]))
+lymeMx$s27 <-2^(LymeDisease3[,28])*(max(2^(LymeDisease3[,28]))-min(2^(LymeDisease3[,28])))+min(2^(LymeDisease3[,28]))
+lymeMx$s28 <-2^(LymeDisease3[,29])*(max(2^(LymeDisease3[,29]))-min(2^(LymeDisease3[,29])))+min(2^(LymeDisease3[,29]))
+lymeMx$s29 <-2^(LymeDisease3[,30])*(max(2^(LymeDisease3[,30]))-min(2^(LymeDisease3[,30])))+min(2^(LymeDisease3[,30]))
+lymeMx$s30 <-2^(LymeDisease3[,31])*(max(2^(LymeDisease3[,31]))-min(2^(LymeDisease3[,31])))+min(2^(LymeDisease3[,31]))
+
+
+lymeMx$s31 <-2^(LymeDisease3[,32])*(max(2^(LymeDisease3[,32]))-min(2^(LymeDisease3[,32])))+min(2^(LymeDisease3[,32]))
+lymeMx$s32 <-2^(LymeDisease3[,33])*(max(2^(LymeDisease3[,33]))-min(2^(LymeDisease3[,33])))+min(2^(LymeDisease3[,33]))
+lymeMx$s33 <-2^(LymeDisease3[,34])*(max(2^(LymeDisease3[,34]))-min(2^(LymeDisease3[,34])))+min(2^(LymeDisease3[,34]))
+lymeMx$s34 <-2^(LymeDisease3[,35])*(max(2^(LymeDisease3[,35]))-min(2^(LymeDisease3[,35])))+min(2^(LymeDisease3[,35]))
+lymeMx$s35 <-2^(LymeDisease3[,36])*(max(2^(LymeDisease3[,36]))-min(2^(LymeDisease3[,36])))+min(2^(LymeDisease3[,36]))
+lymeMx$s36 <-2^(LymeDisease3[,37])*(max(2^(LymeDisease3[,37]))-min(2^(LymeDisease3[,37])))+min(2^(LymeDisease3[,37]))
+lymeMx$s37 <-2^(LymeDisease3[,38])*(max(2^(LymeDisease3[,38]))-min(2^(LymeDisease3[,38])))+min(2^(LymeDisease3[,38]))
+lymeMx$s38 <-2^(LymeDisease3[,39])*(max(2^(LymeDisease3[,39]))-min(2^(LymeDisease3[,39])))+min(2^(LymeDisease3[,39]))
+lymeMx$s39 <-2^(LymeDisease3[,40])*(max(2^(LymeDisease3[,40]))-min(2^(LymeDisease3[,40])))+min(2^(LymeDisease3[,40]))
+lymeMx$s40 <-2^(LymeDisease3[,41])*(max(2^(LymeDisease3[,41]))-min(2^(LymeDisease3[,41])))+min(2^(LymeDisease3[,41]))
+
+
+lymeMx$s41 <-2^(LymeDisease3[,42])*(max(2^(LymeDisease3[,42]))-min(2^(LymeDisease3[,42])))+min(2^(LymeDisease3[,42]))
+lymeMx$s42 <-2^(LymeDisease3[,43])*(max(2^(LymeDisease3[,43]))-min(2^(LymeDisease3[,43])))+min(2^(LymeDisease3[,43]))
+lymeMx$s43 <-2^(LymeDisease3[,44])*(max(2^(LymeDisease3[,44]))-min(2^(LymeDisease3[,44])))+min(2^(LymeDisease3[,44]))
+lymeMx$s44 <-2^(LymeDisease3[,45])*(max(2^(LymeDisease3[,45]))-min(2^(LymeDisease3[,45])))+min(2^(LymeDisease3[,45]))
+lymeMx$s45 <-2^(LymeDisease3[,46])*(max(2^(LymeDisease3[,46]))-min(2^(LymeDisease3[,46])))+min(2^(LymeDisease3[,46]))
+lymeMx$s46 <-2^(LymeDisease3[,47])*(max(2^(LymeDisease3[,47]))-min(2^(LymeDisease3[,47])))+min(2^(LymeDisease3[,47]))
+lymeMx$s47 <-2^(LymeDisease3[,48])*(max(2^(LymeDisease3[,48]))-min(2^(LymeDisease3[,48])))+min(2^(LymeDisease3[,48]))
+lymeMx$s48 <-2^(LymeDisease3[,49])*(max(2^(LymeDisease3[,49]))-min(2^(LymeDisease3[,49])))+min(2^(LymeDisease3[,49]))
+lymeMx$s49 <-2^(LymeDisease3[,50])*(max(2^(LymeDisease3[,50]))-min(2^(LymeDisease3[,50])))+min(2^(LymeDisease3[,50]))
+lymeMx$s50 <-2^(LymeDisease3[,51])*(max(2^(LymeDisease3[,51]))-min(2^(LymeDisease3[,51])))+min(2^(LymeDisease3[,51]))
+
+
+lymeMx$s51 <-2^(LymeDisease3[,52])*(max(2^(LymeDisease3[,52]))-min(2^(LymeDisease3[,52])))+min(2^(LymeDisease3[,52]))
+lymeMx$s52 <-2^(LymeDisease3[,53])*(max(2^(LymeDisease3[,53]))-min(2^(LymeDisease3[,53])))+min(2^(LymeDisease3[,53]))
+lymeMx$s53 <-2^(LymeDisease3[,54])*(max(2^(LymeDisease3[,54]))-min(2^(LymeDisease3[,54])))+min(2^(LymeDisease3[,54]))
+lymeMx$s54 <-2^(LymeDisease3[,55])*(max(2^(LymeDisease3[,55]))-min(2^(LymeDisease3[,55])))+min(2^(LymeDisease3[,55]))
+lymeMx$s55 <-2^(LymeDisease3[,56])*(max(2^(LymeDisease3[,56]))-min(2^(LymeDisease3[,56])))+min(2^(LymeDisease3[,56]))
+lymeMx$s56 <-2^(LymeDisease3[,57])*(max(2^(LymeDisease3[,57]))-min(2^(LymeDisease3[,57])))+min(2^(LymeDisease3[,57]))
+lymeMx$s57 <-2^(LymeDisease3[,58])*(max(2^(LymeDisease3[,58]))-min(2^(LymeDisease3[,58])))+min(2^(LymeDisease3[,58]))
+lymeMx$s58 <-2^(LymeDisease3[,59])*(max(2^(LymeDisease3[,59]))-min(2^(LymeDisease3[,59])))+min(2^(LymeDisease3[,59]))
+lymeMx$s59 <-2^(LymeDisease3[,60])*(max(2^(LymeDisease3[,60]))-min(2^(LymeDisease3[,60])))+min(2^(LymeDisease3[,60]))
+lymeMx$s60 <-2^(LymeDisease3[,61])*(max(2^(LymeDisease3[,61]))-min(2^(LymeDisease3[,61])))+min(2^(LymeDisease3[,61]))
+
+
+lymeMx$s61 <-2^(LymeDisease3[,62])*(max(2^(LymeDisease3[,62]))-min(2^(LymeDisease3[,62])))+min(2^(LymeDisease3[,62]))
+lymeMx$s62 <-2^(LymeDisease3[,63])*(max(2^(LymeDisease3[,63]))-min(2^(LymeDisease3[,63])))+min(2^(LymeDisease3[,63]))
+lymeMx$s63 <-2^(LymeDisease3[,64])*(max(2^(LymeDisease3[,64]))-min(2^(LymeDisease3[,64])))+min(2^(LymeDisease3[,64]))
+lymeMx$s64 <-2^(LymeDisease3[,65])*(max(2^(LymeDisease3[,65]))-min(2^(LymeDisease3[,65])))+min(2^(LymeDisease3[,65]))
+lymeMx$s65 <-2^(LymeDisease3[,66])*(max(2^(LymeDisease3[,66]))-min(2^(LymeDisease3[,66])))+min(2^(LymeDisease3[,66]))
+lymeMx$s66 <-2^(LymeDisease3[,67])*(max(2^(LymeDisease3[,67]))-min(2^(LymeDisease3[,67])))+min(2^(LymeDisease3[,67]))
+lymeMx$s67 <-2^(LymeDisease3[,68])*(max(2^(LymeDisease3[,68]))-min(2^(LymeDisease3[,68])))+min(2^(LymeDisease3[,68]))
+lymeMx$s68 <-2^(LymeDisease3[,69])*(max(2^(LymeDisease3[,69]))-min(2^(LymeDisease3[,69])))+min(2^(LymeDisease3[,69]))
+lymeMx$s69 <-2^(LymeDisease3[,70])*(max(2^(LymeDisease3[,70]))-min(2^(LymeDisease3[,70])))+min(2^(LymeDisease3[,70]))
+lymeMx$s70 <-2^(LymeDisease3[,71])*(max(2^(LymeDisease3[,71]))-min(2^(LymeDisease3[,71])))+min(2^(LymeDisease3[,71]))
+
+
+lymeMx$s71 <-2^(LymeDisease3[,72])*(max(2^(LymeDisease3[,72]))-min(2^(LymeDisease3[,72])))+min(2^(LymeDisease3[,72]))
+lymeMx$s72 <-2^(LymeDisease3[,73])*(max(2^(LymeDisease3[,73]))-min(2^(LymeDisease3[,73])))+min(2^(LymeDisease3[,73]))
+lymeMx$s73 <-2^(LymeDisease3[,74])*(max(2^(LymeDisease3[,74]))-min(2^(LymeDisease3[,74])))+min(2^(LymeDisease3[,74]))
+lymeMx$s74 <-2^(LymeDisease3[,75])*(max(2^(LymeDisease3[,75]))-min(2^(LymeDisease3[,75])))+min(2^(LymeDisease3[,75]))
+lymeMx$s75 <-2^(LymeDisease3[,76])*(max(2^(LymeDisease3[,76]))-min(2^(LymeDisease3[,76])))+min(2^(LymeDisease3[,76]))
+lymeMx$s76 <-2^(LymeDisease3[,77])*(max(2^(LymeDisease3[,77]))-min(2^(LymeDisease3[,77])))+min(2^(LymeDisease3[,77]))
+lymeMx$s77 <-2^(LymeDisease3[,78])*(max(2^(LymeDisease3[,78]))-min(2^(LymeDisease3[,78])))+min(2^(LymeDisease3[,78]))
+lymeMx$s78 <-2^(LymeDisease3[,79])*(max(2^(LymeDisease3[,79]))-min(2^(LymeDisease3[,79])))+min(2^(LymeDisease3[,79]))
+lymeMx$s79 <-2^(LymeDisease3[,80])*(max(2^(LymeDisease3[,80]))-min(2^(LymeDisease3[,80])))+min(2^(LymeDisease3[,80]))
+lymeMx$s80 <-2^(LymeDisease3[,81])*(max(2^(LymeDisease3[,81]))-min(2^(LymeDisease3[,81])))+min(2^(LymeDisease3[,81]))
+
+lymeMx$s81 <-2^(LymeDisease3[,82])*(max(2^(LymeDisease3[,82]))-min(2^(LymeDisease3[,82])))+min(2^(LymeDisease3[,82]))
+lymeMx$s82 <-2^(LymeDisease3[,83])*(max(2^(LymeDisease3[,83]))-min(2^(LymeDisease3[,83])))+min(2^(LymeDisease3[,83]))
+lymeMx$s83 <-2^(LymeDisease3[,84])*(max(2^(LymeDisease3[,84]))-min(2^(LymeDisease3[,84])))+min(2^(LymeDisease3[,84]))
+lymeMx$s84 <-2^(LymeDisease3[,85])*(max(2^(LymeDisease3[,85]))-min(2^(LymeDisease3[,85])))+min(2^(LymeDisease3[,85]))
+lymeMx$s85 <-2^(LymeDisease3[,86])*(max(2^(LymeDisease3[,86]))-min(2^(LymeDisease3[,86])))+min(2^(LymeDisease3[,86]))
+lymeMx$s86 <-2^(LymeDisease3[,87])*(max(2^(LymeDisease3[,87]))-min(2^(LymeDisease3[,87])))+min(2^(LymeDisease3[,87]))
+
+```
+
+
+We now have our suspected original x values from taking the inverse of the log2(normalized x) <pseudo code>
+```{r}
+
+head(lymeMx,10)
+
+```
+We can play around with the normalized data in some Tableau charts or this data right here that could be the raw values or close. Lets add in the actual names for our denormalized data.
+
+```{r}
+colnames(lymeMx)[2:87] <- colnames(LymeDisease3)[2:87]
+```
+
+```{r}
+head(lymeMx,10)
+```
+
+Actually, these column names aren't going to do much justice to the sample identifiers in the charts, so we should align these column names up to their aliases or descriptive names. We named that table after creating it earlier as descriptors2.
+```{r}
+head(descriptors2,10)
+
+```
+
+Lets test the colnames of our denormalized and normalized data frames arethe same order as our descriptor names so we can replace the names.
+```{r}
+descriptors2$denormalized <- as.factor(paste(colnames(lymeMx)[2:87]))
+descriptors2$normalized <- as.factor(paste(colnames(LymeDisease3)[2:87]))
+descriptors2[,1:5]
+```
+
+```{r}
+descriptors2$Sample_GEO_Accession==descriptors2$denormalized
+descriptors2$Sample_GEO_Accession==descriptors2$normalized
+```
+The sample IDs are the same order as our aliases for the class they belong to. Here are our unique classes, there are four of them.
+```{r}
+unique(descriptors2$classDisease)
+```
+
+We can still use our shorter names or gsub() the extended names with the information we don't need. But we have to add a number to the end that makes each column name different.
+```{r}
+
+n21 <- as.character(c(1:21))
+n28 <- as.character(c(1:28))
+n27 <- as.character(c(1:27))
+n10 <- as.character(c(1:10))
+```
+
+
+```{r}
+descriptors2$classDisease[1:21] <- paste(descriptors2$classDisease[1:21],n21,sep='_')
+descriptors2$classDisease[22:49] <- paste(descriptors2$classDisease[22:49],n28,sep='_')
+descriptors2$classDisease[50:76] <- paste(descriptors2$classDisease[50:76],n27,sep='_')
+descriptors2$classDisease[77:86] <- paste(descriptors2$classDisease[77:86],n10,sep='_')
+
+```
+
+```{r}
+head(descriptors2)
+```
+
+```{r}
+descriptors2$classDisease
+```
+
+```{r}
+write.csv(descriptors2,'descriptors2.csv',row.names=F)
+```
+
+
+```{r}
+LymeDisease4 <- LymeDisease3
+colnames(LymeDisease4)[2:87] <- descriptors2$classDisease
+lymeMx2 <- lymeMx
+colnames(lymeMx2)[2:87] <- descriptors2$classDisease
+
+```
+
+
+```{r}
+write.csv(LymeDisease3,'LymeDisease3.csv',row.names=FALSE)
+write.csv(LymeDisease4,'LymeDisease4normalized-easynames.csv',row.names=FALSE)
+write.csv(lymeMx2,'lymeMx2-denormalized-easynames.csv',row.names=FALSE)
+write.csv(lymeMx,'lymeMx-denormalized-originalnames.csv',row.names=FALSE)
+```
+
+Now, we can use this data to find the mean values across samples and get the fold change values, then plot the data in Tableau.
+```{r}
+LymeDisease5 <- LymeDisease4 %>% group_by(Gene) %>% summarise_at(vars('healthyControl_1':'Antibodies_6months_10'),mean)
+```
+
+
+```{r}
+lymeMx3 <- lymeMx2 %>% group_by(gene) %>% summarise_at(vars('healthyControl_1':'Antibodies_6months_10'),mean)
+```
+
+
+```{r}
+Lyme6 <- LymeDisease5 %>% group_by(Gene) %>% 
+  mutate(
+    healthy_Mean = mean(healthyControl_1:healthyControl_21,na.rm=T),
+    acuteLymeDisease_Mean = mean(acuteLymeDisease_1:acuteLymeDisease_28,na.rm=T),
+    antibodies_1month_Mean = mean(Antibodies_1month_1:Antibodies_1month_27,na.rm=T),
+    antibodies_6month_Mean = mean(Antibodies_6months_1:Antibodies_6months_10,na.rm=T)
+  )
+```
+
+
+```{r}
+tail(colnames(Lyme6),5)
+```
+
+
+```{r}
+lymeMx4 <- lymeMx3 %>% group_by(gene) %>% 
+  mutate(
+    healthy_Mean = mean(healthyControl_1:healthyControl_21,na.rm=T),
+    acuteLymeDisease_Mean = mean(acuteLymeDisease_1:acuteLymeDisease_28,na.rm=T),
+    antibodies_1month_Mean = mean(Antibodies_1month_1:Antibodies_1month_27,na.rm=T),
+    antibodies_6month_Mean = mean(Antibodies_6months_1:Antibodies_6months_10,na.rm=T)
+  )
+```
+
+
+```{r}
+tail(colnames(lymeMx4),5)
+```
+
+
+```{r}
+lymeMx5 <- lymeMx4 %>% group_by(gene) %>% 
+  mutate(acuteHealthy_foldChange=acuteLymeDisease_Mean/healthy_Mean,
+    antibodies_1month_healthy_foldChange=antibodies_1month_Mean/healthy_Mean,
+    antibodies_6month_healthy_foldchange=antibodies_6month_Mean/healthy_Mean)
+```
+
+
+```{r}
+tail(colnames(lymeMx5),10)
+```
+
+
+```{r}
+Lyme7 <- Lyme6 %>% group_by(Gene) %>% 
+  mutate(acuteHealthy_foldChange=acuteLymeDisease_Mean/healthy_Mean,
+    antibodies_1month_healthy_foldChange=antibodies_1month_Mean/healthy_Mean,
+    antibodies_6month_healthy_foldchange=antibodies_6month_Mean/healthy_Mean)
+```
+
+
+```{r}
+tail(colnames(Lyme7),10)
+```
+
+Our tables of unique genes grouped by genes to get their means of each gene within each sample for the duplicate genes, the added features of each class's mean gene expression per gene, and the fold change ratio of the diseased or treated to the healthy gene expression values have been created. The normalized data or the original data is the **Lyme7** data frame and the denormalized data is the **lymeMx5** data frame. Now each shrunk from 48851 genes to 19526 genes when grouping by unique genes, but now that is still a lot of genes, so lets take the gene that have the top 10 most expressed and least expressed values in both data frames by acute/healthy fold change, and the top 10 and bottom 10 of the 1month of antibodies/healthy fold change values, and finally the top 10 and bottom 10 of the 6 month of antibodies/healthy fold change values.
+***
+The denormalized group first:
+
+Acute/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+acuteHealthy20 <- lymeMx5[order(lymeMx5$acuteHealthy_foldChange,
+                                decreasing=T)[c(1:10,19517:19526)],]
+```
+
+One month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month1healthy20 <- lymeMx5[order(lymeMx5$antibodies_1month_healthy_foldChange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+Six month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month6healthy20 <- lymeMx5[order(lymeMx5$antibodies_6month_healthy_foldchange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+
+```{r}
+lymeMx6 <- rbind(acuteHealthy20,month1healthy20,month6healthy20)
+lymeMx7 <- lymeMx6[!duplicated(lymeMx6),]
+```
+There were 43 unique genes between all three fold change groups in the denormalized data out of 60 genes that were either the top 10 or bottom 10 of genes being expressed.
+
+Now, for the normalized data:
+
+Acute/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+acuteHealthy20b <- Lyme7[order(Lyme7$acuteHealthy_foldChange,
+                                decreasing=T)[c(1:10,19517:19526)],]
+```
+
+One month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month1healthy20b <- Lyme7[order(Lyme7$antibodies_1month_healthy_foldChange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+Six month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month6healthy20b <- Lyme7[order(Lyme7$antibodies_6month_healthy_foldchange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+
+```{r}
+Lyme8 <- rbind(acuteHealthy20b,month1healthy20b,month6healthy20b)
+Lyme9 <- Lyme8[!duplicated(Lyme8),]
+```
+There are 33 genes unique to the normalized data, probably because this data had negative values. The scaling done to denormalize this data is probably not exactly what the true raw values are. But they should have the same number of genes, but this one has 10 less than the normalized data. We will see later which one can be split into training and testing sets with better prediction accuracy within each class and overall. 
+
+
+Lets also add the gene summaries to these data frames and create a field that will give the class of each sample. This file,genecards2.R, is an R file sourced for the functions made in previous scripts. We lose one of the genes in the original data frame because it isn't in genecards.org and end up with 32 instead of 33 genes for that data frame.
+```{r}
+source('geneCards2.R')
+```
+
+LOC400657 (#23 in list) is a gene that genecards.org doesn't recognize and it will throw an error, so we should skip it.
+```{r, eval=F}
+for (i in Lyme9$Gene[1:22]){
+  getSummaries2(i,'protein')
+}
+
+for (i in Lyme9$Gene[24:33]){
+  getSummaries2(i,'protein')
+}
+
+```
+
+
+
+```{r, eval=F}
+getGeneSummaries('protein')
+```
+
+
+```{r}
+summsLyme9 <- read.csv("proteinGeneSummaries_protein.csv")
+```
+
+
+```{r, eval=F}
+for (i in lymeMx7$gene){
+  getSummaries2(i,'immune')
+}
+```
+
+
+```{r, eval=F}
+getGeneSummaries('immune')
+```
+
+
+```{r}
+summsLymeMx7 <- read.csv("proteinGeneSummaries_immune.csv")
+```
+
+
+```{r}
+Lyme10 <- merge(summsLyme9,Lyme9,by.x='gene', by.y='Gene')
+lymeMx8 <- merge(summsLymeMx7,lymeMx7, by.x='gene',by.y='gene')
+```
+
+Lets create those classes for each data frame. But first we have to tidy the data.
+```{r}
+Lyme11 <- gather(Lyme10, key='classSample',value='classValue',8:93)
+lymeMx9 <- gather(lymeMx8,key='classSample',value='classValue',8:93)
+```
+
+```{r}
+Lyme11$class <- Lyme11$classSample
+Lyme11$class <- gsub('^hea.*$','healthy',Lyme11$class, perl=T)
+Lyme11$class <- gsub('^acute.*$','acute Lyme Disease',Lyme11$class,perl=T)
+Lyme11$class <- gsub('^.*1month.*$','1 month treatment', Lyme11$class, perl=T)
+Lyme11$class <- gsub('^.*6month.*$','6 months treatment',Lyme11$class,perl=T)
+```
+
+
+```{r}
+lymeMx9$class <- lymeMx9$classSample
+lymeMx9$class <- gsub('^hea.*$','healthy',lymeMx9$class, perl=T)
+lymeMx9$class <- gsub('^acute.*$','acute Lyme Disease',lymeMx9$class,perl=T)
+lymeMx9$class <- gsub('^.*1month.*$','1 month treatment', lymeMx9$class, perl=T)
+lymeMx9$class <- gsub('^.*6month.*$','6 months treatment',lymeMx9$class,perl=T)
+```
+
+
+
+```{r}
+unique(Lyme11$gene)
+```
+
+```{r}
+unique(lymeMx9$gene)
+
+```
+
+It looks like the genes aren't even the same genes.
+```{r}
+unique(Lyme11$Gene) %in% unique(lymeMx9)
+```
+
+Apparently, they are not the same genes. Its ok, maybe they still offer some information. The techniques and methods are the same to inverse what was assumed to be the normalization method, but for typical studies. In bioinformatics, with gene expression data, there is usually more to it, like trimming the bottom and top outliers, and taking the quantile normalization, then scaling. We used the standardization method of normalizing values between 0 and 1 as log2 normalized is to 
+f(x)=log2[(x-min(x))/(max(x)-min(x))]=y and the inverse would be:
+f(y)=2^[y*(max(y)-min(y))+min(y)]=x
+So, there is some logic to this, and at some point rounded values could lose information in the numer of scientific placeholders of precision is used in calculating the inverse of the base 2 log, or the exact values for max and min of X need to be used. Reminder, when I demonstrated this earlier, the method worked using this procedure for 10 values that included a 0 where a small value was added to take the log2 of x=0 without an error, but the exact values were still decimals at the final step. To fix this they were turned to fractions, where the denominator was the max(x), and so each value multiplied by the denominator at that point returned the original x values in our list of 10. When addidng that step to the last step we used on this data to denormalize the data, the values were extremely large, approximately 10^3-10^4 larger. So we stopped before taking the fractional values. We will continue with these genes in our machine learning to see if either set makes good gene targets for pathogenesis of lyme disease by how accurately the classes of: healthy, acute disease, 1 month convalescing or developing antibodies after being given a regimen of antibiotics, and 6 months convalescing after being given antibiotics. This is temporal or time specific data, and there were some discrepencies in the study when being done, because it spanned 2 years, some patients didn't know how long they had it but if they had symptoms they were assumed to be suffering from lyme disease, like the facial paralysis or the skin lesion type marks. Also, some patients dropped out and if the study spanned two years, and only the last 6 months recorded the convalescing at 6 months then the first batches of patients in the acute phase weren't being recorded or they were actually being monitored after six months and up to two years after being given antibiotics. So we can imagine the data might be skewed for these differences or discrepencies. 
+
+Lets write these two tables out to csv files to analyze visually in Tableau.
+```{r}
+write.csv(Lyme11,'LymeDisease_originalValues_foldchages32.csv',row.names=F)
+```
+
+
+```{r}
+write.csv(lymeMx9,'LymeDisease_denormalizedValues_foldchanges43.csv',row.names=F)
+```
+
+Lets see what great charts were created in Tableau with this data using our de-normalized or de-standardized data.
+
+![Tableau Dashboard of Lime Disease De-Standardized](./images/dashboardLymeDisease.png)
+
+The link to this dashboard is at this site:https://public.tableau.com/profile/janis5126#!/vizhome/LymeDiseaseDashboardGSE145974/LymeDiseaseDashboardGSE145974?publish=yes
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/LymeDiseaseDashboardGSE145974/LymeDiseaseDashboardGSE145974?publish=yes' target='blank'>Dashboard De-standardized Lyme Disease Data GSE145974</a>
+
+In the above image and the dashboard if you click on the link above, You can see the genes to the right with the gene summaries if you hover over the text to the right of the dashboard in the 'Gene Filtering' box. It will select only the genes you select to show the median gene expression values within each class of healthy, acute lyme disease, one month after antibiotics treatment, and six months after antibiotics treatement, with varying class sizes due to changes in patient participation and methods during the study. The top chart of the warm colors is for the median gene expression values for each gene of 43 genes that were filtered from 19,000 genes as having the most or least fold change in disease or treatment to healthy ratios for all three classes with duplicates removed from the top 10 or bottom 10 genes in each class by fold change. The lower left chart with the greens is the fold change values for each gene within each class of acute lyme disease, one month of treatment, or six months of treatment compared to healthy samples by mean values of all samples in each class. The lower right chart of the purple colors is a tree map that is categorized by class and within each class each box is a gene with the average gene expression value within that class for that gene. The upper right box shows that the gene DEFA1 was selected and it is displayed in all three accompanying charts on the dashboard.
+
+The following images are the charts that are in the dashboard above.
+
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/FoldChangeLymeDiseaseGSE145974/FoldChangeLymeDiseaseGSE145974?publish=yes' target='blank'>link to image of the bar chart of fold change values</a>.
+
+![Bar chart of Fold Change Values](./images/foldChangeLymeDisease.png)
+
+
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/medianClassValuesLymeDiseaseGSE145974/medianClassValuesLymeDiseaseGSE145974?publish=yes' target='blank'>link to image of the bar chart of median gene expression values</a>.
+
+![Bar chart of Median Gene Expression Values](./images/MedianValuesLymeDiseaes.png)
+
+
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/TreeBoxChartLymeDiseaseGSE145974/TreeBoxChartLymeDiseaseGSE145974?publish=yes' target='blank'>link to image of the treechart of average gene expression values within each class</a>.
+
+![Treemap chart of the average gene expression values for each gene within each of the four classes](./images/TreemapLymeDisease.png)
+
+
+We will perform machine learning on this data in the upcoming additions to this post. But first we will also look at those genes that are from the original data as the most or least expressed genes in our lyme disease data obtained from NCBI with accession ID, GSE145974.
+
+
