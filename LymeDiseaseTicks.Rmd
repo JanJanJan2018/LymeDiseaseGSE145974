@@ -38,8 +38,15 @@ The study authors used the same algorithms I always go to for analysis and score
 library(MASS)
 library(dplyr)
 library(tidyr)
-```
 
+library(e1071)
+library(caret)
+library(randomForest)
+library(MASS)
+#library(gbm)
+library(RANN) #used in the tuning parameter of rf method of caret for 'oob' one out bag
+
+```
 
 ```{r}
 ticks <- read.delim('GSE145974_series_matrix.txt',sep='\t',header=T,
@@ -722,6 +729,9 @@ write.csv(Lyme11,'LymeDisease_originalValues_foldchages32.csv',row.names=F)
 write.csv(lymeMx9,'LymeDisease_denormalizedValues_foldchanges43.csv',row.names=F)
 ```
 
+
+***
+
 Lets see what great charts were created in Tableau with this data using our de-normalized or de-standardized data.
 
 ![Tableau Dashboard of Lime Disease De-Standardized](./images/dashboardLymeDisease.png)
@@ -753,5 +763,1371 @@ The following images are the charts that are in the dashboard above.
 
 
 We will perform machine learning on this data in the upcoming additions to this post. But first we will also look at those genes that are from the original data as the most or least expressed genes in our lyme disease data obtained from NCBI with accession ID, GSE145974.
+
+***
+
+The original data with log2 normalized values including negative values was used to make the same or similar dashboard of charts as was done above with the de-standardized lyme disease data of GSE145974. However, because of the negative values, the treemap chart was replaced with a highlight chart as the treemap removed 45 negative values. This data took a total of 32 genes (technically 33 but one didn't have a gene summary so it was omitted), and compared the most or least expressed genes as up and down regulated in the disease (acute) or treatment (1 month or 6 months of antibiotics) to the healthy samples all as the fold change of class sample mean values per gene. 
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/dashboardOriginalGSE145974/dashboardOriginalGSE145974?publish=yes' target='blank'>dashboard of the original GSE145974 top changing genes</a>
+
+![image dashboard of the original GSE145974 top changing genes](./images/dashboardOriginal.png)
+
+Figure 5: The above image is a dashboard of the original log2 normalized data that has negative values as well as positive values. The filter at the top right will display only the gene or genes selected if you select one then use ctrl + click on each additional gene in that 'Gene Filter' box. The other three charts will show the respective gene as it relates in the top for median gene expression values within each class and the number of samples in each class, in the lower left the fold change values for that gene in the three classes of diseased or treatment to healthy as a ratio of means, and in the lower right the highlight table with a color gradient bar of oranges and grays for the gene or genes selected. The oranges are the lowest values, or down-regulated negative gene expression values from the median, and the grays are the genes with more positive gene expression values or up regulation in each class of acute, 1 month of treatment, 6 months of treatment, or healthy. The image above will link to this dashboard to try out the different genes associated with lyme disease and treatment. I just read an article about Gigi Hadid having lyme disease since age 14 and is now 21 years old with brain fog, joint pain and stiffness, light sensitivity, headaches, anxiety, and possibly other symptoms like face paralysis related to lyme disease.
+
+
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/HighlightTableOriginalGSE145974/HighlightTableOriginalGSE145974?publish=yes' target='blank'>Highlight chart of original GSE145974 data</a>
+
+![image of highlight chart of original GSE145974 data](./images/HighlightTable.png)
+
+Figure 6: The above image is a highlight chart of the average gene expression values within each class of acute, one month of treatment, six months of treatment, and healthy classes. This chart was used instead of the treemap chart used in the de-standardized data because it allows negative values, and treemap charts do not and would have eliminated 45 gene values across these samples. The genes are gradient color coded, so that under expressed genes in samples having negative values are reddish-orange, and those genes with more gene expression values or up regulated are gray. Colors in between the reddish-orange and gray are for genes that didn't change as much up or down in gene expression. After six months of treatments one gene is highly under expressed, ISG20, and it is in the middle of the chart in a reddish color that indicates it is the most under expressed gene or at the end of the lowest values for gene expression. The gene summary for this gene is in the dashboard that Figure 5 links to. The Entrez gene summary says Hepatitis C and Yellow fever are associated with abnormalities in this gene and its network involvements include the innate immune system. A gene with the highest up regulation is CENPF in the acute phase it is highly up regulated. The gene summary for this gene says it could possibly have some involvement with chromosome segregation during mitosis and also that it encodes a protein associated with the centromere-kinetochore complex. Also, autoantibodies in cancer patients have been found that target this gene, CENPF. And a quick online wikipedia search says autoantibodies are the antibodies your own body produces to attack your own body's proteins.
+
+
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/foldChangeOriginalGSE145974/foldChangeOriginalGSE145974?publish=yes' target='blank'>Original Fold Change Values GSE145974</a>
+
+![image of original GSE145974 fold change values](./images/foldChangeOriginal.png)
+
+Figure 7: The image above is to the chart of original lyme disease data fold change values for each gene across all samples. It is bidirectional as is the other charts in direction or color gradient, because this data has negative values accomodating the log2 normalized data. Negative values indicate down regulation and positive values indicate up regulation or you can think suppression versus explosion if magnitude dramatic enough relative to the neighboring genes. All these genes are the most or least expressed of all genes in the data using the original values, so they should have some change visible. The gene CTXN3 is shown to be highly down regulated with -128,817 in fold change comparison of this gene in patients' average gene expression after six months of treatment compared to the healthy samples. It was down regulated on average 10^-6 approximately less than healthy samples. That is a very large magnitude and could possibly be a target gene for having the disease or antibodies. It is important to get the treatment early to avoid symptoms, but some people still have symptoms and treatment might not work well or at all is what this could be indicating. Because the other classes of acute and one month of treatment as well as healthy don't have this magnitude of down regulation at all. Keep in mind the patients in this class was nearly a third of the original sample size 10/28 of acute patients. The gene summary for this gene, CTXN3, in the dashboard says it is a protein encoding gene that Autotopagnosia and Clear Cell Adinoma are diseases associated to CTXN3. Autotopagnosia is the inability for one to identify his or her body parts or locate them on his or her body. And Clear Cell Adinoma is a vaginal/cervical cancer that is rare and usually diethylstilbestrol (DES) exposure in utero of a female's mother. The daughters of moms exposed to DES are more likely to get Clear Cell Adinoma and a gene that is highly underexpressed in our 6 months of treatment group, CTXN3, is associated to that disease. Either by having lower risk by not producing as much, or increased risk due to not producing much of it as the healthy and acute disease phase are. 
+
+
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/medianOriginalGSE145974/medianOriginalGSE145974?publish=yes' target='blank'>Median Gene Expression Values original GSE145974 data</a>
+
+![image of median gene expression values of original GSE145974 data](./images/MedianValuesOriginal.png)
+
+Figure 8: The above image is to the bar chart that is bidirectional like Figure 7 of fold change values, but this chart is of the median gene expression values across all four samples for each gene. The number of samples in each class is also labeled on each bar. Scrolling through the genes in the chart you will see other genes like ENO1 which has a gene summary stating it encodes alpha-enolase, one of three enolase isoenzymes found in mammals. This gene is associated with an autoantigen in Hoshimoto encephalopothy, another autoimmune contributor it sounds like. We see it is dramatically under regulated in the healthy samples and also under regulated in the samples who received six months of antibiotic treatment. But in the acute phase it is up regulated almost 50% more than the healthy samples and in the acute samples it is also up regulated but by about 25% of the healthy samples. ISG20 is very highly under regulated in the 6 month class at about 10 fold the amount of the healthy class median values which is also under regulated. We saw this gene earlier in our highlight chart as being associated with yellow fever and hepatitis C as well as innate immunity network signaling. It is the most under regulated gene in all. A gene, RNF168, is also highly under regulated in the 6 month class, but the healthy class and 1 month class are up regulated in this gene by 3-4 fold more than the 6 month class by visual inspection. This gene, RNF168, has an Entrez gene summary that states it is involved in DNA Double-Strand Break (DSB) repair, and that it has mutations associated with Riddle syndrome. Wikipedia says this is a rare genetic disease that causes radiosensitivity, ImmunoDeficiency Dysmorphic  features, and learning difficulties as an acronym meaning.
+
+
+***
+
+There are a lot of different genes with useful information and they are the top genes in changes in gene expression in either data, but we still need to test these genes to see how they compare using machine learning to see how well the classifications can be predicted by these genes. We will get to that later but soon. 
+
+
+Lets start the machine learning by first making the data frames with the class as the output or target feature and the samples as observations and the genes as predictors from both sets separately.
+
+The 43 de-standardized genes will be created first then the 32 original genes that are completely different. Both are the filtered top or bottom 10 genes out of their respective 19526 unique gene sets of each class by fold change of acute/healthy, 1 month/healthy, or 6 months/healthy by means of their respective class samples.
+
+The destandardized set. Lets just name our data sets something silly to keep track of them. **Dance is the de-standardized set and Stand** is the original log2 normalized set. 
+
+
+The Dance Machine Learning set, made from the lymeMx7, not-tidied, de-standardized data frame:
+```{r}
+colnames(lymeMx7)
+```
+
+Lets remove the fold change and mean value features from our lymeMx7 data frame and save it as 'Dance' after we transpose it to get the unique genes as predictors and the samples as observations.
+```{r}
+dance <- lymeMx7[,-c(88:94)]
+danceSampleNames <- colnames(dance)[2:87]
+
+month1 <- grep('1month',danceSampleNames)
+month6 <- grep('6month',danceSampleNames)
+healthy <- grep('healthy',danceSampleNames)
+acute <- grep('acute',danceSampleNames)
+
+class <- danceSampleNames
+class[month1] <- '1 month'
+class[month6] <- '6 months'
+class[healthy] <- 'healthy'
+class[acute] <- 'acute'
+
+
+danceGeneNames <- dance$gene
+Dance <- as.data.frame(t(dance[,-1]))
+colnames(Dance) <- danceGeneNames
+Dance$class <- class
+Dance2 <- Dance[,c(44,1:43)]
+head(Dance2)
+```
+
+We have our machine learning ready data frame of de-standardized genes, and will be using the target, class, for predictions. We could use all 43 genes or just take those genes in the visualizations that we saw had very peculiar fold change values like in the 6 months of treatment or acute stages. Or we could test both. Might as well test bost as we will see how likely these genes are in predicting an acute disease stage, treatment time, or healthy class by blood analysis.
+
+Lets refresh our memories on what those genes were. We put them in our notes on the visualizations above for the de-standardized Tableau charts. We might miss some, as those were scanned visuals, so I am going to make a list of those genes that have noticeable shifts in gene expression or fold change values compared to the other classes and make that are peculiar set of genes. We could even divide those genes up into the ones up or down regulated in the 6 month or the acute stage only or even the healthy samples only. I will revisit that <a href='https://public.tableau.com/profile/janis5126#!/vizhome/LymeDiseaseDashboardGSE145974/LymeDiseaseDashboardGSE145974?publish=yes' target='blank'>dashboard</a> and select the genes from the filter and compare across all charts available and bring back the findings here. We'll call that set Dance-odd6, Dance-oddAcute, or Dance-oddHealthy. Possibly Dance-odd1, but I didn't notice anything the first quick scan through the genes. There are only 43, so it shouldn't be a problem.
+
+Using the fold change values:
+
+- acute up, decreasing order of up is 1 month, healthy, 6 months
+	
+- up acute
+
+monotonically decreasing from acute -> 1 month -> 6 months:
+
+BPI  
+CAMP 
+CEACAM8 
+CTSG 
+DEFA1 
+DEFA4 
+DHX58 
+FCGR3B  
+GAPT 
+GZMH 
+HBG1 
+HLA-DRB4 
+KIR2DL3 
+KIR2DS1 
+LCN2 
+LSM2 
+LTF 
+MS4A3 
+POLR21 
+RGS18 
+S100B 
+TNFSF10 
+
+- more up regulated in acute, drops in 1month then up regulated to approximately 1/2 acute in 6 months:
+
+THBD
+CHI3L1
+SERPINB2
+
+-up in acute and down 1/2 in 1 month with slight increase in 6 months by approx 5%
+
+TXNL4A
+
+- up reg in acute, drops in 1 month then almost up reg same amount in 6 months as in acute
+
+HTR3C
+
+%%%%%
+- up 6 months
+
+- starts up in acute, drops in 1 month then up in 6 months close to acute levels
+
+AREG
+BEST1
+KIAA1245
+LIPN
+OR2B11
+
+- starts mid-level in acute, then stays about the same in 1 month, then noticeably up in 6 months about two fold as in acute
+
+CKMT1B
+
+- starts low in acute, drops a little in 1 month, then up in 6 months much more noticeably then in the acute by 5-10 fold acute levels
+
+IL1B 
+MUC12
+MYOM2
+OLR1
+THBS1
+TSIX
+XIST
+
+- starts low, stays same approx in 1 month, then much more noticeably up in 6 months 5-10 fold
+
+FSIP1
+
+
+Few observations, many of the genes are monotonically decreasing from acute to 1 month to 6 months in gene expression levels, where they start high in the acute stage, then decrease gradually in 1 month:
+ **BPI**, **CAMP, CEACAM8, CTSG,  DEFA1, DEFA4, DHX58, FCGR3B, GAPT, GZMH, HBG1,** **HLA-DRB4,KIR2DL3, KIR2DS1, LCN2, LSM2, LTF, MS4A3, POLR21, RGS18, S100B, TNFSF10** 
+ 
+, and more decrease in 6 months. The we have some odd genes , **THBD, CHI3L1, and SERPINB2** in the acute up regulated genes that don't behave this way, but they indicate that maybe treatment is working, because they start high in acute, then drop in 1 month of treatment, and then increase almost to half the same levels as in the acute phase after 6 months of treatment. Also, **TXNL4A**, drops in 1 month and stays about the same after 6 months. And another gene, **HTR3C**, drops in 1 month, then increases to almost same acute levels in 6 months. Lets make those lists of the acute, then the lists for the 6 months genes.
+```{r}
+#monotonically decreasing 
+Acute_md <- c('BPI', 'CAMP', 'CEACAM8', 'CTSG',  'DEFA1', 'DEFA4', 'DHX58', 'FCGR3B', 'GAPT', 'GZMH', 'HBG1', 'HLA-DRB4','KIR2DL3', 'KIR2DS1', 'LCN2', 'LSM2', 'LTF', 'MS4A3', 'POLR21', 'RGS18', 'S100B', 'TNFSF10')
+
+#high in acute, drop after 1 month, then half as high as acute after 6 months
+Acute_mayWork <- c('THBD', 'CHI3L1','SERPINB2')
+
+#odd ones in acute, starts high in acute, then drops, and increases slightly in 6 months
+Acute_dropsThenUpslightly <- 'TXNL4A'
+Acute_dropsReturnsSame <- 'HTR3C'
+
+
+```
+
+
+For the six months of treatment, genes that were noticeably increased after 6 months compared to the acute stage before treatment, none monotonically increased from acute levels, to 1 month of treatment levels, to six months of treatment levels. But some did drop in 1 month, then increase in 6 months to levels much higher by 5-10 fold than the acute levels, **IL1B, MUC12, MYOM2, OLR1, THBS1, TSIX, XIST**. A few genes start lower, stays lower, then increase 5-10 fold of the acute level in 6 months, **FSIP1 and CKMT1B**. And there are those genes that are more up regulated after 6 months of treatment, but only slightly more than the acute phase and after decreasing in the 1 month of treatment phase, **AREG, BEST1, KIAA1245, LIPN, and OR2B11**. Lets now make those lists to show genes that are more up regulated in the 6 month samples.
+```{r}
+month6_5foldup <- c('IL1B', 'MUC12', 'MYOM2', 'OLR1', 'THBS1', 'TSIX', 'XIST')
+month6_5foldupStartLow <- c('FSIP1','CKMT1B')
+month6_upMoreThanAcute <- c('AREG', 'BEST1', 'KIAA1245', 'LIPN', 'OR2B11')
+```
+
+Now that we have our lists, lets see about those data frames for the seven different groups of gene anomolies or similarities. The following are our ML ready dataframes for our seven groups in our de-standardized Lyme disease data.
+```{r}
+Acute_md_DF <- Dance2[,colnames(Dance2) %in% Acute_md]
+Acute_md_DF$class <- Dance2$class
+
+Acute_mayWork_DF <- Dance2[,colnames(Dance2) %in% Acute_mayWork]
+Acute_mayWork_DF$class <- Dance2$class
+
+Acute_dropsThenUpslightly_DF <- data.frame(TXNL4A=Dance2[,colnames(Dance2) %in% Acute_dropsThenUpslightly], row.names=row.names(Dance2))
+Acute_dropsThenUpslightly_DF$class <- Dance2$class
+
+Acute_dropsReturnsSame_DF <- data.frame(HTR3C=Dance2[,colnames(Dance2) %in%  Acute_dropsReturnsSame],row.names=row.names(Dance2))
+Acute_dropsReturnsSame_DF$class <- Dance2$class
+
+month6_5foldup_DF <- Dance2[,colnames(Dance2) %in% month6_5foldup]
+month6_5foldup_DF$class <- Dance2$class
+
+month6_5foldupStartLow_DF <- Dance2[,colnames(Dance2) %in% month6_5foldupStartLow]
+month6_5foldupStartLow_DF$class <- Dance2$class
+
+month6_upMoreThanAcute_DF <- Dance2[,colnames(Dance2) %in% month6_upMoreThanAcute]
+month6_upMoreThanAcute_DF$class <- Dance2$class
+
+```
+
+Great, now we need to run through each of these 7 data frames and split into separate training and testing sets, and test a machine learning algorithm on. I tend to always use random forest to start with, or caret's rpart. 
+
+Lets make sure we keep the same samples in our testing set and training set for each group to test machine learning algorithm(s) on. Lets keep the standard 70% training set and 30% testing set using a random sampling of our classes.
+```{r}
+set.seed(34567)
+train <- sample(1:86,.7*86)
+training <- class[train]
+testing <- class[-train]
+t <- data.frame(train = training)
+ts <- data.frame(test= testing)
+
+```
+
+
+```{r}
+t %>% group_by(train) %>% count(train)
+```
+
+
+```{r}
+ts %>% group_by(test) %>% count(test)
+```
+
+We can see we have a fair share of samples in our training set and at least one of each class in our testing set to make predictions based on the model we train. Lets keep these same samples in each of our 8 groups to classify with. Lets make our 8 training and testing sets with our indices labeled 'train' and note the numeric labeling of each correspongs to their data frame:
+
+Training/Testing split 1: Acute_md_DF
+Training/Testing split 2: Acute_mayWork_DF
+Training/Testing split 3: Acute_dropsThenUpslightly_DF
+Training/Testing split 4: Acute_dropsReturnsSame_DF
+Training/Testing split 5: month6_5foldup_DF
+Training/Testing split 6: month6_5foldupStartLow_DF
+Training/Testing split 7: month6_upMoreThanAcute_DF
+Training/Testing split 8: Dance2
+
+```{r}
+training1 <- Acute_md_DF[train,]
+testing1 <- Acute_md_DF[-train,]
+training2 <- Acute_mayWork_DF[train,]
+testing2 <- Acute_mayWork_DF[-train,]
+training3 <- Acute_dropsThenUpslightly_DF[train,]
+testing3 <- Acute_dropsThenUpslightly_DF[-train,]
+training4 <- Acute_dropsReturnsSame_DF[train,]
+testing4 <- Acute_dropsReturnsSame_DF[-train,]
+training5 <- month6_5foldup_DF[train,]
+testing5 <- month6_5foldup_DF[-train,]
+training6 <- month6_5foldupStartLow_DF[train,]
+testing6 <- month6_5foldupStartLow_DF[-train,]
+training7 <- month6_upMoreThanAcute_DF[train,]
+testing7 <- month6_upMoreThanAcute_DF[-train,]
+training8 <- Dance2[train,]
+testing8 <- Dance2[-train,]
+
+```
+
+Lets make a function specific to our data frames to return the precision, recall, and accuracy of these four classes. I actually made this in a previous script,monotonicGenes.Rmd, when testing the COVID-19 samples with GSE152418 that also had four classes to classify. But those classes were healthy, moderate, severe, or ICU grades of severity of Covid19. Actually, I found out later, that the convalescent class was its own class even though it was only one sample. So there should have been five classes. But no need to alter that function now. There is also some other packages or in the caret package, that I never use that can return the precision and recall, but i don't think as a confusion matrix. I thought the convalescent class was mislabeled, so had it relabeled as healthy, since the models pedicted it as such. I didn't find out until this study, when the summary of this study, GSE145974, used 'convalesced' blood after 1 and 6 months of antibiotics, that the sample in GSE152418 was likely its own class. I assumed it was  identifying the source of its patient sample,because another previous study on Rheumatoid Arthritis (RA), GSE151161, did use convalescent patients, and it preceded the analysis on GSE152418. Typically in research, you need a client consent and informed consent from people who aren't incarcerated or in the care of another person or facility,because it violates the human research subjects guidelines for ethical research and not victimizing vulnerable populations or culpabe and incoherant populations. This stems from research that was criminal in the Tuskegee hospital on injecting black populations with syphilis or polio vaccines on inmates in other studies for some small reward or break from their punishment or lowered/free cost clinic for medical treatment. Any researcher knows this, especially if they are funded by government agencies. Also, due to the Nazi research done on Jewish victims during World War 2, the Nuremberg Code, was created, as well as later the Belmont report. "The Nuremberg Code states that "the voluntary consent of the human subject is absolutely essential" and it further explains the details implied by this requirement: capacity to consent, freedom from coercion, no penalty for withdrawal, and comprehension of the risks and benefits involved."-The Nuremberg Code, taken from a resource for getting certified in understanding compliance with human research experiments as part of my graduate research project this had to be completed. The agency who provided this, similar to HIPPA compliance for healthcare providers, is <a href='https://about.citiprogram.org/en/homepage/' target='blank'>CITI</a>. 
+
+
+```{r}
+precisionRecallAccuracy <- function(df){
+  
+ colnames(df) <- c('pred','type')
+  df$pred <- as.character(paste(df$pred))
+  df$type <- as.character(paste(df$type))
+  
+ classes <- unique(df$type)
+ 
+ class1a <- as.character(paste(classes[1]))
+ class2a <- as.character(paste(classes[2]))
+ class3a <- as.character(paste(classes[3]))
+ class4a <- as.character(paste(classes[4]))
+ 
+  #correct classes
+  class1 <- subset(df, df$type==class1a)
+  class2 <- subset(df, df$type==class2a)
+  class3 <- subset(df, df$type==class3a)
+  class4 <- subset(df, df$type==class4a)
+  
+  #incorrect classes
+  notClass1 <- subset(df,df$type != class1a)
+  notClass2 <- subset(df,df$type != class2a)
+  notClass3 <- subset(df,df$type != class3a)
+  notClass4 <- subset(df, df$type != class4a)
+  
+  #true positives (real positives predicted positive)
+  tp_1 <- sum(class1$pred==class1$type)
+  tp_2 <- sum(class2$pred==class2$type)
+  tp_3 <- sum(class3$pred==class3$type)
+  tp_4 <- sum(class4$pred==class4$type)
+  
+  #false positives (real negatives predicted positive)
+  fp_1 <- sum(notClass1$pred==class1a)
+  fp_2 <- sum(notClass2$pred==class2a)
+  fp_3 <- sum(notClass3$pred==class3a)
+  fp_4 <- sum(notClass4$pred==class4a)
+  
+  #false negatives (real positive predicted negative)
+  fn_1 <- sum(class1$pred!=class1$type)
+  fn_2 <- sum(class2$pred!=class2$type)
+  fn_3 <- sum(class3$pred!=class3$type)
+  fn_4 <- sum(class4$pred!=class4$type)
+  
+  #true negatives (real negatives predicted negative)
+  tn_1 <- sum(notClass1$pred!=class1a)
+  tn_2 <- sum(notClass2$pred!=class2a)
+  tn_3 <- sum(notClass3$pred!=class3a)
+  tn_4 <- sum(notClass4$pred!=class4a)
+  
+  
+  #precision
+  p1 <- tp_1/(tp_1+fp_1)
+  p2 <- tp_2/(tp_2+fp_2)
+  p3 <- tp_3/(tp_3+fp_3)
+  p4 <- tp_4/(tp_4+fp_4)
+  
+  p1 <- ifelse(p1=='NaN',0,p1)
+  p2 <- ifelse(p2=='NaN',0,p2)
+  p3 <- ifelse(p3=='NaN',0,p3)
+  p4 <- ifelse(p4=='NaN',0,p4)
+  
+  #recall
+  r1 <- tp_1/(tp_1+fn_1)
+  r2 <- tp_2/(tp_2+fn_2)
+  r3 <- tp_3/(tp_3+fn_3)
+  r4 <- tp_4/(tp_4+fn_4)
+  
+  r1 <- ifelse(r1=='NaN',0,r1)
+  r2 <- ifelse(r2=='NaN',0,r2)
+  r3 <- ifelse(r3=='NaN',0,r3)
+  r4 <- ifelse(r4=='NaN',0,r4)
+  
+  #accuracy
+  ac1 <- (tp_1+tn_1)/(tp_1+tn_1+fp_1+fn_1)
+  ac2 <- (tp_2+tn_2)/(tp_2+tn_2+fp_2+fn_2)
+  ac3 <- (tp_3+tn_3)/(tp_3+tn_3+fp_3+fn_3)
+  ac4 <- (tp_4+tn_4)/(tp_4+tn_4+fp_4+fn_4)
+  
+  table <- as.data.frame(rbind(c(class1a,p1,r1,ac1),
+                         c(class2a,p2,r2,ac2),
+                         c(class3a,p3,r3,ac3),
+                         c(class4a,p4,r4,ac4)))
+  
+  colnames(table) <- c('class','precision','recall','accuracy')
+  acc <- (sum(df$pred==df$type)/length(df$type))*100
+  cat('accuracy is: ',as.character(paste(acc)),'%')
+  return(table)
+  
+  
+}
+```
+
+
+Lets start with the first group of genes using 
+Training/Testing 1:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfMod1 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training1),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF1 <- predict(rfMod1, testing1)
+
+predDF1 <- data.frame(predRF1, type=testing1$class)
+predDF1
+```
+
+
+```{r}
+pra1 <- precisionRecallAccuracy(predDF1)
+pra1
+```
+
+
+That set wasn't so great. Lets run through the other 7 sets using the same format and compare the results at the end.
+
+Training/Testing 2:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod2 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training2),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF2 <- predict(rfMod2, testing2)
+
+predDF2 <- data.frame(predRF2, type=testing2$class)
+predDF2
+```
+
+
+```{r}
+pra2 <- precisionRecallAccuracy(predDF2)
+pra2
+```
+
+
+Training/Testing 3:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod3 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training3),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF3 <- predict(rfMod3, testing3)
+
+predDF3 <- data.frame(predRF3, type=testing3$class)
+predDF3
+```
+
+
+```{r}
+pra3 <- precisionRecallAccuracy(predDF3)
+pra3
+```
+
+
+Training/Testing 4:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod4 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training4),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF4 <- predict(rfMod4, testing4)
+
+predDF4 <- data.frame(predRF4, type=testing4$class)
+predDF4
+```
+
+
+```{r}
+pra4 <- precisionRecallAccuracy(predDF4)
+pra4
+```
+
+
+Training/Testing 5:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod5 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training5),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF5 <- predict(rfMod5, testing5)
+
+predDF5 <- data.frame(predRF5, type=testing5$class)
+predDF5
+```
+
+
+```{r}
+pra5 <- precisionRecallAccuracy(predDF5)
+pra5
+```
+
+
+Training/Testing 6:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod6 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training6),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF6 <- predict(rfMod6, testing6)
+
+predDF6 <- data.frame(predRF6, type=testing6$class)
+predDF6
+```
+
+
+```{r}
+pra6 <- precisionRecallAccuracy(predDF6)
+pra6
+```
+
+
+Training/Testing 7:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod7 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training7),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF7 <- predict(rfMod7, testing7)
+
+predDF7 <- data.frame(predRF7, type=testing7$class)
+predDF7
+```
+
+
+```{r}
+pra7 <- precisionRecallAccuracy(predDF1)
+pra7
+```
+
+
+Training/Testing 8:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod8 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training8),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF8 <- predict(rfMod8, testing8)
+
+predDF8 <- data.frame(predRF8, type=testing8$class)
+predDF8
+```
+
+
+```{r}
+pra8 <- precisionRecallAccuracy(predDF1)
+pra8
+```
+
+The seed for randomness within the computations of this operating system and R has to be set before the models, because running different times after setting the seed when generating the random indices of the train vector didn't work for the model generation. I reran 3-5 times and got inconsistent results unless using the set.seed before the 8 models were ran. It is supposed to work only once, and generate the same results everytime. But in either case it represents how the random forest works by randomly selecting samples within the sampels to test an ensemble of models and trees. This current seed still kept the 1st, 7th, and 8th groups as the highest scoring in accuracy.
+Overall accuracy was not good for any of the groups where it ranged from 19-54% accuracy in predicted being the same as the actual type. But there was class accuracy differences that could best be compared by combining the precision and recall accuracy tables then adding in a feature to identify which model the result came from. Note that the worst group for prediction accuracy was group 6, and the three best groups with 54% accuracy were groups 1, 7, and 8. Worst set of genes to keep as target genes for Lyme Disease are... 
+These are the groups by gene behaviors in fold change of diseased or treated mean values compared to healthy mean values:
+Training/Testing split 1: Acute_md_DF
+Training/Testing split 2: Acute_mayWork_DF
+Training/Testing split 3: Acute_dropsThenUpslightly_DF
+Training/Testing split 4: Acute_dropsReturnsSame_DF
+Training/Testing split 5: month6_5foldup_DF
+Training/Testing split 6: month6_5foldupStartLow_DF
+Training/Testing split 7: month6_upMoreThanAcute_DF
+Training/Testing split 8: Dance2
+
+So, without tuning our models or testing other algorithms, we can assume from this point on, all the 43 genes are best, as well as the set of genes with more up regulation after 6 months than in the acute phase, and the set of genes with the monotoncially decreasing gene values from acute to one month of treatment to six months of treatment with the acute phase having the highest gene expression values. The other genes are possibly noisy or add noise to our data that prevents the model from classifying greatly. But lets see if any of the sets did have better recall or precision in a class by class prediction accuracy first, before attempting to tune our random forest models.Also note, that I omitted the preprocessing step in the model training to begin with and then added it in and improved the range from a best score of 34% to a best score in overall accuracy of 50%.
+```{r}
+pra_all <- rbind(pra1,pra2,pra3,pra4,pra5,pra6,pra7,pra8)
+pra_all$GroupMembership <- c(rep(1,4),
+                             rep(2,4),
+                             rep(3,4),
+                             rep(4,4),
+                             rep(5,4),
+                             rep(6,4),
+                             rep(7,4),
+                             rep(8,4))
+pra_all2 <- pra_all %>% group_by(class) %>% mutate(max=
+                  ifelse(accuracy==max(as.numeric(paste(accuracy))),'max','not max'))
+max <- subset(pra_all2, pra_all2$max=='max')
+max
+```
+
+We can see from the above chart of class membership accuracies that some other groups also did make good gene targets for some classes. Group 2 and group 3 had the best accuracy in predicting 1 or 6 months for group 3 and only the 1 month class for group 2. The 1st, 7th, and 8th groups were better at predicting the healthy and acute class memberships. We had fewer of the 6 month class, but many 1 month samples, yet that class for 1 month didn't have any noticeable changes in our 43 genes to distinguish with the random forest classification. We could try more trees or tuning the model to see if there is an improvement. These models were fast and that was likely due to the number of trees being small. 
+Lets use the randomForest package and its randomForest() to tune our model and test our same 8 groups.
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training1) <- gsub('-','',colnames(training1))
+colnames(testing1) <- gsub('-','',colnames(testing1))
+testing1$class <- as.factor(paste(testing1$class))
+training1$class <- as.factor(paste(training1$class))
+RF1 <- randomForest(class ~ ., data=training1, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict1 <- predict(RF1,testing1)
+predict1df <- data.frame(predict1, type=testing1$class)
+predict1df
+
+```
+
+
+```{r}
+PRA1 <- precisionRecallAccuracy(predict1df)
+PRA1
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training2) <- gsub('-','',colnames(training2))
+colnames(testing2) <- gsub('-','',colnames(testing2))
+testing2$class <- as.factor(paste(testing2$class))
+training2$class <- as.factor(paste(training2$class))
+RF2 <- randomForest(class ~ ., data=training2, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict2 <- predict(RF2,testing2)
+predict2df <- data.frame(predict2, type=testing2$class)
+predict2df
+
+```
+
+
+```{r}
+PRA2 <- precisionRecallAccuracy(predict2df)
+PRA2
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training3) <- gsub('-','',colnames(training3))
+colnames(testing3) <- gsub('-','',colnames(testing3))
+testing3$class <- as.factor(paste(testing3$class))
+training3$class <- as.factor(paste(training3$class))
+RF3 <- randomForest(class ~ ., data=training3, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict3 <- predict(RF3,testing3)
+predict3df <- data.frame(predict3, type=testing3$class)
+predict3df
+
+```
+
+
+```{r}
+PRA3 <- precisionRecallAccuracy(predict3df)
+PRA3
+```
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training4) <- gsub('-','',colnames(training4))
+colnames(testing4) <- gsub('-','',colnames(testing4))
+testing4$class <- as.factor(paste(testing4$class))
+training4$class <- as.factor(paste(training4$class))
+RF4 <- randomForest(class ~ ., data=training4, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict4 <- predict(RF4,testing4)
+predict4df <- data.frame(predict4, type=testing4$class)
+predict4df
+
+```
+
+
+```{r}
+PRA4 <- precisionRecallAccuracy(predict4df)
+PRA4
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training5) <- gsub('-','',colnames(training5))
+colnames(testing5) <- gsub('-','',colnames(testing5))
+testing5$class <- as.factor(paste(testing5$class))
+training5$class <- as.factor(paste(training5$class))
+RF5 <- randomForest(class ~ ., data=training5, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict5 <- predict(RF5,testing5)
+predict5df <- data.frame(predict5, type=testing5$class)
+predict5df
+
+```
+
+
+```{r}
+PRA5 <- precisionRecallAccuracy(predict5df)
+PRA5
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training6) <- gsub('-','',colnames(training6))
+colnames(testing6) <- gsub('-','',colnames(testing6))
+testing6$class <- as.factor(paste(testing6$class))
+training6$class <- as.factor(paste(training6$class))
+RF6 <- randomForest(class ~ ., data=training6, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict6 <- predict(RF6,testing6)
+predict6df <- data.frame(predict6, type=testing6$class)
+predict6df
+
+```
+
+
+```{r}
+PRA6 <- precisionRecallAccuracy(predict6df)
+PRA6
+```
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training7) <- gsub('-','',colnames(training7))
+colnames(testing7) <- gsub('-','',colnames(testing7))
+testing7$class <- as.factor(paste(testing7$class))
+training7$class <- as.factor(paste(training7$class))
+RF7 <- randomForest(class ~ ., data=training7, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict7 <- predict(RF7,testing7)
+predict7df <- data.frame(predict7, type=testing7$class)
+predict7df
+
+```
+
+
+```{r}
+PRA7 <- precisionRecallAccuracy(predict7df)
+PRA7
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training8) <- gsub('-','',colnames(training8))
+colnames(testing8) <- gsub('-','',colnames(testing8))
+testing8$class <- as.factor(paste(testing8$class))
+training8$class <- as.factor(paste(training8$class))
+RF8 <- randomForest(class ~ ., data=training8, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict8 <- predict(RF8,testing8)
+predict8df <- data.frame(predict8, type=testing8$class)
+predict8df
+
+```
+
+
+```{r}
+PRA8 <- precisionRecallAccuracy(predict8df)
+PRA8
+```
+
+```{r}
+PRA_all <- rbind(PRA1,PRA2,PRA3,PRA4,PRA5,PRA6,PRA7,PRA8)
+PRA_all$groupMembership <- c(rep(1,4),
+                             rep(2,4),
+                             rep(3,4),
+                             rep(4,4),
+                             rep(5,4),
+                             rep(6,4),
+                             rep(7,4),
+                             rep(8,4))
+PRA_all2 <- PRA_all %>% group_by(class) %>% mutate(max=
+    ifelse(accuracy==max(as.numeric(paste(accuracy))),'max','not max'))
+max2 <- subset(PRA_all2, PRA_all2$max=='max')
+max2
+```
+
+The accuracy wasn't as great using the randomForest() instead of caret's built in random forest function. And we did still see group 8 or all 43 genes score the best or with the best. Group 5 made a class prediction best score that it didn't in the other model. Group 5 scored the best on class '1 month', and group 8 scored the best on the same class but only in accuracy, becasue group 5 had better recall and precision than Group 8 on that class. Group 8 did score 100% accuracy in the '6 months' class in recall, precision, and total accuracy. Recall that our sets are split with the same share of training and testing samples and that there were 8 samples of the 6 months class to train our model and 2 to predict in the testing set with our model. Group 8 got all relevant 6 month class samples in the testing set (precision) and no other samples were misclassified as the 6 months class (recall). The 'healthy' class was also correctly predicted by Group 8 with 81% accuracy where the precision is 71% and recall was 63%. The acute class was predicted best by group 5 with 58% accuracy, 30% recall (misclassified 70%), and 43% precision (didn't find 57%).
+
+We could test out more algorithms or we could test out the original data of 32 completely different genes. and go through the same process of grouping the genes by those gene fold change ratios that we saw in our 7 groups above. We could also test out a data set of those genes in our top performing groups, 1,8, and 2,3,5,or 7 with groups 4 and 6 not being a better performer at any class prediction or overall accuracy. Those groups again are:
+
+Training/Testing split 1: Acute_md_DF
+Training/Testing split 2: Acute_mayWork_DF
+Training/Testing split 3: Acute_dropsThenUpslightly_DF
+Training/Testing split 4: Acute_dropsReturnsSame_DF
+Training/Testing split 5: month6_5foldup_DF
+Training/Testing split 6: month6_5foldupStartLow_DF
+Training/Testing split 7: month6_upMoreThanAcute_DF
+Training/Testing split 8: Dance2
+
+where md is monotonically decreasing from acute -> month 1 -> month 6 and Dance2 is all genes. There weren't any monotonically increasing genes, all the remaining genes started higher than the 1 month class then increased to a level close to the acute levels, just under the acute levels, slightly more than the acute levels, or much higher than the acute levels. All 43 genes (Dance2), the monotonically decreasing genes, and all groups except for group 4 and 5 can be used. But really we are just picking the ones that aren't useful from group 8. Groups 4 and 6, with group 6 seeming to always score the minimum accuracy will be in our data set to test our models on. This means neither of the genes that return to similar levels from acute to the 6th month levels or the genes from the group that starts low in the acute phase but end up increasing to about five fold the acute levels by month 6 will be used. And I would have thought those genes would be indicative of the class. We should just make two data sets, where one is Groups 4 and 6, and the other is groups 1,2,3,5, and 7. Because group 8 is all the genes in the set. Either set could have some noise. These are fold change values of the mean values across all samples. It is possible to go back to the dashboard and find some outlier samples that skew the gene values from group 4 and 6. Lets see what those genes are again. Acute_dropsReturnsSame, and month6_5foldupStartLow are those gene lists made earlier.
+
+```{r}
+poorPathogenesisTargets <- c(month6_5foldupStartLow, Acute_dropsReturnsSame)
+poorPathogenesisTargets
+```
+
+We need to go back to the <a href='https://public.tableau.com/profile/janis5126#!/vizhome/LymeDiseaseDashboardGSE145974/LymeDiseaseDashboardGSE145974?publish=yes' target='blank'>dashboard</a> and see if FSIP1, CKMT1B, or HTR3C have some samples that are skewing their gene expression values greatly. 
+
+I actually didn't post the individual gene expression values up in a chart on Tableau, so I just loaded one that shows there are some samples skewing the data with those three genes, FSIP1, CKMT1B, and HTR3C. I have decided to backtrack and see if I take the median fold change values instead of the mean across all samples if the results will be better. 
+
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/genesAcrossEachSampleGSE145974/genesAcrossEachSampleGSE145974?publish=yes' target='blank'>individual samples' gene expression values across all four classes</a>.
+
+![FSIP1, CKMT1B, and HTR3C spread across all samples](./images/SampleGeneExpressionsBarChart.png)
+
+Figure 9: I added the sample chart to see the groups of individual samples within each class of healthy, acute lyme disease, one month of antibiotic treatment, and six months of antibiotics treatments, after realizing, some of the genes' fold change values are skewing the data greatly. And we can see in the above image of this chart (linked to through the image) that these samples in this set of genes that skewed our data when running some machine learning algorithms were samples: sample 7 of the acute class samples, sample 12 of the 1 month class samples, sample 10 of the 6 month class samples, and samples 1, 11, and 12 of the healthy class samples. I want to remove these samples and run some machine learning on the set, or just take the median sample values instead when deriving the fold change values. 
+
+
+***
+
+I want to backtrack at this point and use the median values by switching to a new document to test the median, and referencing back to it in this document, with the machine learning results.
+
+I did that work on the median sample values and dropped those six classes that seemed to skew the data, but the results weren't better and had a best score of 42% accuracy, where here the best score was 54% accuracy so far. We still need to test the machine learning results on the original data that destandardization wasn't made to. But to access the median sample values as fold changes and the results with the six outlier samples in the mean sample derived fold change data before getting the median derived fold changes, it is on rpubs as [part 2 of the Lyme Disease Ticks](https://rpubs.com/janisharris/lymeDiseaeGSE145974part2median6samplesDropped) document.
+
+
+I took out six samples that were skewed in this set, but never tested if taking those samples out of this data would improve the classification accuracy in this data. We can do that fast with our testing and training sets. Lets use all the data of training and testing set 8. 
+```{r}
+row.names(training8)
+```
+
+sample 7 of the acute class samples, sample 12 of the 1 month class samples, sample 10 of the 6 month class samples, and samples 1, 11, and 12 of the healthy class samples.
+
+Check back for machine learning on the original data. 
+```{r}
+skewSamples <- c('Antibodies_6months_10','Antibodies_1month_12','acuteLymeDisease_7',
+                 'healthyControl_1','healthyControl_11','healthyControl_12')
+```
+
+
+```{r}
+sort(row.names(training8))
+```
+
+
+```{r}
+sort(skewSamples)
+```
+
+
+```{r}
+skewSamples %in% row.names(training8)
+```
+
+
+```{r}
+skewSamples %in% row.names(testing8)
+```
+
+
+```{r}
+dim(training8);dim(testing8)
+```
+
+
+```{r}
+training8b <- subset(training8,!(row.names(training8) %in% skewSamples))
+testing8b <- subset(testing8, !(row.names(testing8) %in% skewSamples))
+```
+
+
+```{r}
+skewSamples %in% row.names(training8b)
+skewSamples %in% row.names(testing8b)
+dim(training8b);dim(testing8b)
+```
+
+Now, we can see if there is an improvement in accuracy in machine learning prediction.
+Training/Testing 1:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfMod8b <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training8b),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF8b <- predict(rfMod8b, testing8b)
+
+predDF8b <- data.frame(predRF8b, type=testing8b$class)
+predDF8b
+```
+
+
+```{r}
+pra8b <- precisionRecallAccuracy(predDF8b)
+pra8b
+```
+
+The accuracy is 47.6% for all genes used on all samples except the six skewed ones. The highest Group 8 scored was 54% earlier. Maybe we could try training more samples and having a smaller test set to predict the classifications? Or making the classes more balanced. Lets see what are class counts are in each set. The healthy class isn't oo bad at 80% precision, it only missed 20% of the healthy samples, but the recall is 67% on the healthy class, meaning it misclassified some samples as healthy. And the recall was 100% on the 6 month class, when there is only one 6 month class in the testing set, it correctly predicted the only class as 6 months out of the total number of classes there are (recall) is 100% but also incorrectly predicted one of the acute classes as a 6 month class so that the total predicted correctly/total predicted as correct or incorrect (precision) is 50%. When looking at recall and precision, both are the number of predicted for a class but the precision is a ratio of the number of classes it predicted as a class as the denominator while the recall is the true number of classes there are. People have tried shortening it and it leaves out those facts or putting prime over the P as P' to condense the interpretation, but it just adds confusion, and really, needs to be fully written out as such, instead of assuming the readers know the shorthand abbreviations that could have been explained many pages or chapters prior to the current page. I will always bring this up. Because the shorthand differences are the reason for the inconsistencies and misinterpretation or confusion by people who don't use these measures day in and out like their normal cup of coffee. You'll see this in type I (count of false positives) and type II (count of false negatives) errors too for hypothesis testing. And people wired to paraphrase will also get confused there, because they want to condense that to false positives as negatives and false negatives as positives, but really its true negatives labeled positive, and true positives labeled negative. It's not a simple rule as the derivative of a constant is always 0, or the derivative of a x^2 with respect to y is 0. Its a mnemonic of sorts that goes through many versions of shorthand text. I believe you can honestly pull the top 90th percentile of calculus III students aside at random and ask them to calculate the precision and recall and not get consistent results. Because its not used as much in calculus but statistics, and also not seen as really relevant until predictive analytics or machine learning. To them it seems trivial, because class imbalance is irrelevant until trying to improve the accuracy and test out ways to make the class balance produce higher prediction accuracy overall, or separate the classess, and make the model predict within a subset of the classess accurately, but not within the total set of classes. So, lets get to class balancing the best we can.
+```{r}
+train8b <- training8b %>% group_by(class) %>% count(class)
+test8b <- testing8b %>% group_by(class) %>% count(class)
+```
+
+```{r}
+train8b
+```
+
+
+```{r}
+test8b
+```
+
+Lets first try training the data on all 86 of the samples except for 1 in each class, then use that 1 sample from each class in the testing set. To select which one to include from each class, lets only keep the one closest to the mean of their class. But we'll use the mean of all the samples in each class.
+```{r}
+
+all <- rbind(testing8,training8)
+dim(all)
+```
+
+
+```{r}
+
+healthy <- subset(all, all$class=='healthy')
+m1 <- subset(all, all$class=='1 month')
+m6 <- subset(all, all$class=='6 months')
+acute <- subset(all, all$class=='acute')
+
+healthyMean <- order(apply(healthy[,-1],1,mean))
+m1Mean <- order(apply(m1[,-1],1,mean))
+m6Mean <- order(apply(m6[,-1],1,mean))
+acuteMean <- order(apply(acute[,-1],1,mean))
+```
+
+
+```{r}
+H1 <- healthyMean[floor(length(healthyMean)/2)]
+M1 <- m1Mean[floor(length(m1Mean)/2)]
+M6 <- m6Mean[floor(length(m6Mean)/2)]
+A1 <- acuteMean[floor(length(acuteMean)/2)]
+
+```
+
+
+```{r}
+testUno <- rbind(healthy[H1,],m1[M1,],m6[M6,],acute[A1,])
+testUno
+```
+
+```{r}
+t1Names <- row.names(testUno)
+trainUno <- subset(all, !(row.names(all) %in% t1Names))
+dim(trainUno);dim(testUno)
+```
+
+Now, lets see how well our model does.
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfModUno <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(trainUno),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRFUno <- predict(rfModUno, testUno)
+
+predDFUno <- data.frame(predRFUno, type=testUno$class)
+predDFUno
+```
+
+
+```{r}
+pra_uno <- precisionRecallAccuracy(predDFUno)
+pra_uno
+```
+
+The overall accuracy was improved by taking the samples closer to the mean of each class to use in the test set and train all samples on. But there was one class that was not identified correctly, and another class that was identified correctly but misclassified another class as its own. Maybe we can improve the accuracy even more by removing those class samples that are outside of the standard deviation by the most and then reselecting our one sample per class testing set. Lets see if we can. 
+
+```{r}
+
+healthyStd <- order(apply(healthy[,-1],1,sd))
+m1Std <- order(apply(m1[,-1],1,sd))
+m6Std <- order(apply(m6[,-1],1,sd))
+acuteStd <- order(apply(acute[,-1],1,sd))
+
+
+```
+
+```{r}
+H1b <- healthyStd[length(healthyStd)]
+m1b <- m1Std[length(m1Std)]
+m6b <- m6Std[length(m6Std)]
+acuteb <- acuteStd[length(acuteStd)]
+```
+
+```{r}
+allb <- all[-c(H1b,m1b,m6b,acuteb),]
+```
+
+
+```{r}
+row.names(testUno)==row.names(allb)
+```
+
+```{r}
+testDos <- testUno
+trainDos <- allb
+```
+
+Lets see if removing the outliers as far as the sample in each class with the most deviation from the mean of all gene values, will improve accuracy in prediction. 
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfModDos <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(trainDos),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRFDos <- predict(rfModDos, testDos)
+
+predDFDos <- data.frame(predRFDos, type=testDos$class)
+predDFDos
+```
+
+It worked, we see all classes were predicted correctly by removing the largest standard error sample across all genes, then using the sample closest to the mean of the genes as the samples to predict. We scored 100% accuracy. Lets see this for precision and recall too.
+```{r}
+pra_dos <- precisionRecallAccuracy(predDFDos)
+pra_dos
+```
+
+Great! all 100% as it should be since the accuracy was 100%
+
+We could also see what the accuracy is with more samples, like the next closest to the mean, and iteratively after running our model on the growing test sets of samples closest to their class mean, until we can get a measure thats indicative of the population. There must be some discrepencies in the samples as far as what is in their systems, how long they had lyme disease before they began treatment, what vitamins and other medications their on, how old are they, condition of healthy, gender, recent injuries, etc. But otherwise, with all other variables being constant, these genes can identify separate classes of lyme disease or healthy in PBMC or blood. 
+
+
+***
+
+Lets look at the original data that wasn't de-standardized and see if we can get the same results, better, or filter out the most deviated samples from the average gene expressions. I have been saying this for a while, but more approaches occur in thought before leaving this de-standardized set of gene expression data. 
+```{r}
+stand <- Lyme9[,-c(88:94)]
+standSampleNames <- colnames(stand)[2:87]
+
+month1 <- grep('1month',standSampleNames)
+month6 <- grep('6month',standSampleNames)
+healthy <- grep('healthy',standSampleNames)
+acute <- grep('acute',standSampleNames)
+
+class <- standSampleNames
+class[month1] <- '1 month'
+class[month6] <- '6 months'
+class[healthy] <- 'healthy'
+class[acute] <- 'acute'
+
+
+standGeneNames <- stand$Gene
+stand <- as.data.frame(t(stand[,-1]))
+colnames(stand) <- standGeneNames
+stand$class <- class
+stand2 <- stand[,c(34,1:33)]
+head(stand2)
+
+```
+
+We could look through all the genes and note the subcategories of behaviors, but there wasn't really an improvement in accuracy when doing this earlier for the de-standardized data. So we will just use all the genes. One gene doesn't have a genes summary, LOC400657 gene, and it won't be in the Tableau charts on this data.But we can still compare how it is in predicting accuracy of classification with our other genes.
+
+
+Lets split the data into testing and training sets.
+```{r}
+set.seed(1234)
+train2 <- sample(1:86,.7*86)
+trainingNorm <- stand2[train2,]
+testingNorm <- stand2[-train2,]
+dim(trainingNorm);dim(testingNorm)
+```
+
+
+
+Training/Testing 1:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfModNorm <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(trainingNorm),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRFNorm <- predict(rfModNorm, testingNorm)
+
+predDFNorm <- data.frame(predRFNorm, type=testingNorm$class)
+predDFNorm
+```
+
+
+```{r}
+praNorm <- precisionRecallAccuracy(predDFNorm)
+praNorm
+```
+
+The accuracy was 50% on this log2 normalized data, which is in the same range of accuracy the de-standardized data scored. Lets try removing the samples with the highest standard deviation from the mean of the samples. But first lets see what the class balance or number of samples in each class for each of the training or testing set.The best precision was on the 6 month class, then the 1 month, acute, and healthy classes. The recall was best on the acute class, then the 1 month, 6 month, and healthy class.
+
+```{r}
+train2Bal <- trainingNorm %>% group_by(class) %>% count(class)
+test2Bal <- testingNorm %>% group_by(class) %>% count(class)
+train2Bal
+```
+
+
+```{r}
+test2Bal
+```
+
+The balance seems to be good, and the 6 to 3 split of the 6 month class seemed to help it score 100% precision accuracy in classification. There must be a lot of variance in those other classes, especially the acute and 1 month, since they had a lot of samples to train and didn't score well when predicting many of those samples.
+
+Lets remove the sample from each class that has the highest deviation and see if it helps in predictions accuracy. 
+```{r}
+H1nb <- subset(stand2, stand2$class=='healthy')
+m1nb <- subset(stand2,stand2$class=='1 month')
+m6nb <- subset(stand2, stand2$class=='6 months')
+acutenb <- subset(stand2, stand2$class=='acute')
+dim(H1nb);dim(m1nb);dim(m6nb);dim(acutenb)
+```
+
+The dimensions are as they should be, 21 samples as healthy, 27 samples as acute, 10 samples as 6 months, and 28 samples as 1 month.
+
+
+```{r}
+Hnc <- order(apply(H1nb[,-1],1,sd))
+m1nc <- order(apply(m1nb[,-1],1,sd))
+m6nc <- order(apply(m6nb[,-1],1,sd))
+acnc <- order(apply(acutenb[,-1],1,sd))
+```
+
+
+```{r}
+ac_sd1 <- acnc[length(acnc)]
+H_sd1 <- Hnc[length(Hnc)]
+m1_sd1 <- m1nc[length(m1nc)]
+m6_sd1 <- m6nc[length(m6nc)]
+
+stdNormUno <- c(H_sd1,ac_sd1,m1_sd1,m6_sd1)
+```
+
+
+```{r}
+stand2_std <- stand2[-stdNormUno,]
+dim(stand2);dim(stand2_std)
+```
+
+We removed the most deviated samples from each class, now lets split the data and test our classification model we train on it.
+```{r}
+set.seed(1234)
+s <-sample(1:82,.7*82)
+trainingNormUno <- stand2_std[s,]
+testingNormUno <- stand2_std[-s,]
+dim(trainingNormUno);dim(testingNormUno)
+```
+
+Lets see the class samples of each set.
+```{r}
+trainCounts <- trainingNormUno %>% group_by(class) %>% count(class)
+trainCounts
+```
+
+
+```{r}
+testCounts <- testingNormUno %>% group_by(class) %>% count(class)
+testCounts
+```
+
+There seems to be a fair distribution of samples in each set. Lets see how our model will classify after removing the most deviated samples of each class.
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfModNormUno <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(trainingNormUno),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRFNormUno <- predict(rfModNormUno, testingNormUno)
+
+predDFNormUno <- data.frame(predRFNormUno, type=testingNormUno$class)
+predDFNormUno
+```
+```{r}
+pra_NormUno <- precisionRecallAccuracy(predDFNormUno)
+pra_NormUno
+```
+
+The accuracy jumped up to 60% from the previous overall accuracy of 50%, so we increased the accuracy 10% better overall by removing a single sample from each class that was the most deviated.The 6 months class scored 100% for accuracy, precision, and recall. So based on these genes we could detect up to 100% accuracy in whether or not a blood sample has had 6 months of antibiotic treatment for lyme disease or not.
+
+Lets not remove any more of the samples from the 6 month class, since we already scored 100% accurate readings. But we should definitely remove some from the other three classes. Lets remove the to 3 classes from those other classes and test the prediction accuracy. 
+
+
+```{r}
+ac_sd1b <- acnc[(length(acnc)-2):length(acnc)]
+H_sd1b <- Hnc[(length(Hnc)-2):length(Hnc)]
+m1_sd1b <- m1nc[(length(m1nc)-2):length(m1nc)]
+
+m6_sd1b <- m6nc[length(m6nc)]
+
+stdNormUnob <- c(H_sd1b,ac_sd1b,m1_sd1b,m6_sd1b)
+```
+
+
+```{r}
+stand2_stdb <- stand2[-stdNormUnob,]
+dim(stand2);dim(stand2_stdb)
+```
+
+We removed the three most deviated samples from each class except the 6 months class, and now lets split the data and test our classification model we train on it.
+```{r}
+set.seed(1234)
+sb <-sample(1:76,.7*76)
+trainingNormUnob <- stand2_stdb[sb,]
+testingNormUnob <- stand2_stdb[-sb,]
+dim(trainingNormUnob);dim(testingNormUnob)
+```
+
+Lets see the class samples of each set.
+```{r}
+trainCountsb <- trainingNormUnob %>% group_by(class) %>% count(class)
+trainCountsb
+```
+
+
+```{r}
+testCountsb <- testingNormUnob %>% group_by(class) %>% count(class)
+testCountsb
+```
+
+There seems to be a fair distribution of samples in each set. Lets see how our model will classify after removing the most deviated samples of each class.
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfModNormUnob <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(trainingNormUnob),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRFNormUnob <- predict(rfModNormUnob, testingNormUnob)
+
+predDFNormUnob <- data.frame(predRFNormUnob, type=testingNormUnob$class)
+predDFNormUnob
+```
+
+```{r}
+pra_NormUnob <- precisionRecallAccuracy(predDFNormUnob)
+pra_NormUnob
+```
+
+The accuracy of 30% was worse than keeping all samples (50%) and worse than removing the most deviated sample (60%). With one less sample in the 6 months class for the testing set it is not longer 100% but 0% in precision and recall, but still scored 87% accuracy overall for not misclassifying any samples as such. The healthy class also received 0% precision and recall. There were now much less data for the model to train on, so lets change the 70-30 split for training and testing to 95% approximately and 5% testing. Lets see how it does.
+
+```{r}
+set.seed(1234)
+sc <-sample(1:76,.95*76)
+trainingNormUnoc <- stand2_stdb[sc,]
+testingNormUnoc <- stand2_stdb[-sc,]
+dim(trainingNormUnoc);dim(testingNormUnoc)
+```
+
+Lets see the class samples of each set.
+```{r}
+trainCountsc <- trainingNormUnoc %>% group_by(class) %>% count(class)
+trainCountsc
+```
+
+```{r}
+testCountsc <- testingNormUnoc %>% group_by(class) %>% count(class)
+testCountsc
+```
+
+One of the 6 months class is missing, so lets take one from the training set and give the training set our extra acute class.
+
+```{r}
+dim(trainingNormUnoc)
+dim(testingNormUnoc)
+
+s6 <- grep('6month',row.names(trainingNormUnoc))[1]
+a6 <- grep('acute',row.names(testingNormUnoc))[2]
+
+S6 <- trainingNormUnoc[s6,]
+A6 <- testingNormUnoc[a6,]
+
+testingNormUnoc2 <- testingNormUnoc[-a6,]
+testingNormUnoc3 <- rbind(testingNormUnoc2,S6)
+
+trainingNormUnoc2 <- trainingNormUnoc[-s6,]
+trainingNormUnoc3 <- rbind(trainingNormUnoc2,A6)
+
+dim(trainingNormUnoc3)
+dim(testingNormUnoc3)
+```
+
+```{r}
+testingNormUnoc3
+```
+
+```{r}
+tail(trainingNormUnoc3)
+```
+
+Now we have at least one of each class in our testing set. This model will train on the data with the three most deviated from the mean samples removed in all classes except the 6 months class, which only has one most deviated sample removed.
+
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfModNormUnoc3 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(trainingNormUnoc3),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRFNormUnoc3 <- predict(rfModNormUnoc3, testingNormUnoc3)
+
+predDFNormUnoc3 <- data.frame(predRFNormUnoc3, type=testingNormUnoc3$class)
+predDFNormUnoc3
+```
+
+```{r}
+pra_NormUnoc3 <- precisionRecallAccuracy(predDFNormUnoc3)
+pra_NormUnoc3
+```
+
+The overall accuracy is 75%, because one class was misclassified as 6 months when it wasn't. That led to a precision of 50% on the 6 month class even though all 6 month classes were predicted accurately (recall of 100%). So this means that originally when keeping all the 6 month samples other than the most deviated we removed, because it scored 100% in prediction for all categories, we now know that removing those additional 6 samples by taking another 2 samples from each of the other three classes affected our model on predicting the 6 months class accurately. But, it did improve the recall and precision for the healthy and acute classes to 100% for precision, recall, and accuracy. but the 1 month class was not identified and was misclassified as the 6 month class. We could be more selective and take only those samples within three standard deviations of the mean and running our algorithms and see how accurate our model is. This is what a course on Linked in learning for recommender systems in python says to do when preprocessing and training your models for classification in that case for sentiment analysis. That course is recommended by Frank Kane, and he has some youtube channel under SunDog he referred to in that online course, but never visited by me. Lets use a little imagination here and say how this effects the model. When someone gives blood at a site, and the values are out of range for the model, then its values in all genes that aren't within the certain selected range of values would throw an error, and the patient would be told his or her sample came out flawed and needs to be done again, with some questionaire on medications taking or not taking a certain vitamin or not drinking water, or drinking more water, or not eating 12-24 hours before, etc. Then if the next time their sample is taken and it is within the range of values, then it can be used to run the model on to predict whether or not the person has lyme disease in the acute phase or if they are healthy. Because this model scored 100% in precision, recall, and accuracy for the healthy and acute classes, but errored on the classes where the patient was taking antibiotics for 1 month and separately 6 months later. So, these genes are also a good set of genes to use as lyme disease pathogenesis, just like our other sample when excluding the most deviated samples from the training model. 
+
+
+
+
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+
 
 

@@ -1,0 +1,1129 @@
+---
+title: "Lyme Disease Ticks"
+author: "Janis Corona"
+date: "8/26/2020"
+output: html_document
+---
+
+
+This is the fold change by median values instead of by mean values to see if the accuracy in classification improves. Some samples might just need to be removed as there are about 4-5 in different classes where some genes are greatly over expresses in relation to their neighbors in each class. This is the median fold change version of [LymeDiseaseTicks.Rmd](https://www.rpubs.com/janisharris/lymeDiseaeGSE145974).
+```{r}
+library(dplyr)
+library(tidyr)
+```
+
+
+```{r}
+descriptors2 <- read.csv('descriptors2.csv')
+```
+
+
+```{r}
+LymeDisease4 <- read.csv('LymeDisease4normalized-easynames.csv', sep=',',
+                         header=T, na.strings = c('',' ','NA'))
+lymeMx2 <- read.csv('lymeMx2-denormalized-easynames.csv', sep=',',header=T,
+                    na.strings=c('',' ','NA'))
+```
+
+Lets remove those samples from our data: Samples: 7 of the acute class samples, sample 12 of the 1 month class samples, sample 10 of the 6 month class samples, and samples 1, 11, and 12 of the healthy class samples.
+```{r}
+colnames(lymeMx2)
+
+lymeMx2b <- lymeMx2[,-c(2,12,13,87,62,29)]
+LymeDisease4b <- LymeDisease4[,-c(2,12,13,87,62,29)]
+```
+
+
+
+Now, we can use this data to find the median values across samples and get the fold change values, then plot the data in Tableau.
+```{r}
+LymeDisease5 <- LymeDisease4b %>% group_by(Gene) %>% summarise_at(vars('healthyControl_2':'Antibodies_6months_9'),median)
+```
+
+
+```{r}
+lymeMx3 <- lymeMx2b %>% group_by(gene) %>% summarise_at(vars('healthyControl_2':'Antibodies_6months_9'),median)
+```
+
+
+```{r}
+Lyme6 <- LymeDisease5 %>% group_by(Gene) %>% 
+  mutate(
+    healthy_Median = median(healthyControl_2:healthyControl_21,na.rm=T),
+    acuteLymeDisease_Median = median(acuteLymeDisease_1:acuteLymeDisease_28,na.rm=T),
+    antibodies_1month_Median = median(Antibodies_1month_1:Antibodies_1month_27,na.rm=T),
+    antibodies_6month_Median = median(Antibodies_6months_1:Antibodies_6months_9,na.rm=T)
+  )
+```
+
+
+```{r}
+tail(colnames(Lyme6),5)
+```
+
+
+```{r}
+lymeMx4 <- lymeMx3 %>% group_by(gene) %>% 
+  mutate(
+    healthy_median = median(healthyControl_2:healthyControl_21,na.rm=T),
+    acuteLymeDisease_median = median(acuteLymeDisease_1:acuteLymeDisease_28,na.rm=T),
+    antibodies_1month_median = median(Antibodies_1month_1:Antibodies_1month_27,na.rm=T),
+    antibodies_6month_median = median(Antibodies_6months_1:Antibodies_6months_9,na.rm=T)
+  )
+```
+
+
+```{r}
+tail(colnames(lymeMx4),5)
+```
+
+
+```{r}
+lymeMx5 <- lymeMx4 %>% group_by(gene) %>% 
+  mutate(acuteHealthy_foldChange=acuteLymeDisease_median/healthy_median,
+    antibodies_1month_healthy_foldChange=antibodies_1month_median/healthy_median,
+    antibodies_6month_healthy_foldchange=antibodies_6month_median/healthy_median)
+```
+
+
+```{r}
+tail(colnames(lymeMx5),10)
+```
+
+
+```{r}
+Lyme7 <- Lyme6 %>% group_by(Gene) %>% 
+  mutate(acuteHealthy_foldChange=acuteLymeDisease_Median/healthy_Median,
+    antibodies_1month_healthy_foldChange=antibodies_1month_Median/healthy_Median,
+    antibodies_6month_healthy_foldchange=antibodies_6month_Median/healthy_Median)
+```
+
+
+```{r}
+tail(colnames(Lyme7),10)
+```
+
+Our tables of unique genes grouped by genes to get their medians of each gene within each sample for the duplicate genes, the added features of each class's median gene expression per gene, and the fold change ratio of the diseased or treated to the healthy gene expression values have been created. The normalized data or the original data is the **Lyme7** data frame and the denormalized data is the **lymeMx5** data frame. Now each shrunk from 48851 genes to 19526 genes when grouping by unique genes, but now that is still a lot of genes, so lets take the gene that have the top 10 most expressed and least expressed values in both data frames by acute/healthy fold change, and the top 10 and bottom 10 of the 1month of antibodies/healthy fold change values, and finally the top 10 and bottom 10 of the 6 month of antibodies/healthy fold change values.
+***
+The denormalized group first:
+
+Acute/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+acuteHealthy20 <- lymeMx5[order(lymeMx5$acuteHealthy_foldChange,
+                                decreasing=T)[c(1:10,19517:19526)],]
+```
+
+One month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month1healthy20 <- lymeMx5[order(lymeMx5$antibodies_1month_healthy_foldChange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+Six month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month6healthy20 <- lymeMx5[order(lymeMx5$antibodies_6month_healthy_foldchange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+
+```{r}
+lymeMx6 <- rbind(acuteHealthy20,month1healthy20,month6healthy20)
+lymeMx7 <- lymeMx6[!duplicated(lymeMx6),]
+```
+There were 45 unique genes between all three fold change groups in the denormalized data out of 60 genes that were either the top 10 or bottom 10 of genes being expressed.
+
+Now, for the normalized data:
+
+Acute/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+acuteHealthy20b <- Lyme7[order(Lyme7$acuteHealthy_foldChange,
+                                decreasing=T)[c(1:10,19517:19526)],]
+```
+
+One month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month1healthy20b <- Lyme7[order(Lyme7$antibodies_1month_healthy_foldChange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+Six month/healthy top 10 and bottom 10 genes by fold change data frame:
+```{r}
+month6healthy20b <- Lyme7[order(Lyme7$antibodies_6month_healthy_foldchange,
+                                 decreasing=T)[c(1:10,19517:19526)],]
+```
+
+
+```{r}
+Lyme8 <- rbind(acuteHealthy20b,month1healthy20b,month6healthy20b)
+Lyme9 <- Lyme8[!duplicated(Lyme8),]
+```
+There are 34 genes unique to the normalized data, probably because this data had negative values. The scaling done to denormalize this data is probably not exactly what the true raw values are. But they should have the same number of genes, but this one has 10 less than the normalized data. We will see later which one can be split into training and testing sets with better prediction accuracy within each class and overall. 
+
+
+Lets also add the gene summaries to these data frames and create a field that will give the class of each sample. This file,genecards2.R, is an R file sourced for the functions made in previous scripts. We lose one of the genes in the original data frame because it isn't in genecards.org and end up with 32 instead of 33 genes for that data frame.
+```{r}
+source('geneCards2.R')
+```
+
+LOC400657 (#13 in list) is a gene that genecards.org doesn't recognize and it will throw an error, so we should skip it.
+```{r, eval=F}
+for (i in Lyme9$Gene[1:12]){
+  getSummaries2(i,'protein')
+}
+
+for (i in Lyme9$Gene[14:34]){
+  getSummaries2(i,'protein')
+}
+
+```
+
+
+
+```{r, eval=F}
+getGeneSummaries('protein')
+```
+
+
+```{r}
+summsLyme9 <- read.csv("proteinGeneSummaries_protein.csv")
+```
+
+The LOC genes don't seem to have gene summaries, so they had to be removed.
+```{r, eval=F}
+for (i in lymeMx7$gene[1:34]){
+  getSummaries2(i,'immune')
+}
+for (i in lymeMx7$gene[37:39]){
+  getSummaries2(i,'immune')
+}
+for (i in lymeMx7$gene[41:45]){
+  getSummaries2(i,'immune')
+}
+```
+
+
+```{r, eval=F}
+getGeneSummaries('immune')
+```
+
+
+```{r}
+summsLymeMx7 <- read.csv("proteinGeneSummaries_immune.csv")
+```
+
+
+```{r}
+Lyme10 <- merge(summsLyme9,Lyme9,by.x='gene', by.y='Gene')
+lymeMx8 <- merge(summsLymeMx7,lymeMx7, by.x='gene',by.y='gene')
+```
+
+Lets create those classes for each data frame. But first we have to tidy the data.
+```{r}
+Lyme11 <- gather(Lyme10, key='classSample',value='classValue',8:87)
+lymeMx9 <- gather(lymeMx8,key='classSample',value='classValue',8:87)
+```
+
+```{r}
+Lyme11$class <- Lyme11$classSample
+Lyme11$class <- gsub('^hea.*$','healthy',Lyme11$class, perl=T)
+Lyme11$class <- gsub('^acute.*$','acute Lyme Disease',Lyme11$class,perl=T)
+Lyme11$class <- gsub('^.*1month.*$','1 month treatment', Lyme11$class, perl=T)
+Lyme11$class <- gsub('^.*6month.*$','6 months treatment',Lyme11$class,perl=T)
+```
+
+
+```{r}
+lymeMx9$class <- lymeMx9$classSample
+lymeMx9$class <- gsub('^hea.*$','healthy',lymeMx9$class, perl=T)
+lymeMx9$class <- gsub('^acute.*$','acute Lyme Disease',lymeMx9$class,perl=T)
+lymeMx9$class <- gsub('^.*1month.*$','1 month treatment', lymeMx9$class, perl=T)
+lymeMx9$class <- gsub('^.*6month.*$','6 months treatment',lymeMx9$class,perl=T)
+```
+
+
+
+```{r}
+unique(Lyme11$gene)
+```
+
+```{r}
+unique(lymeMx9$gene)
+
+```
+
+It looks like the genes aren't even the same genes.
+```{r}
+unique(Lyme11$Gene) %in% unique(lymeMx9)
+```
+
+Apparently, they are not the same genes. Its ok, maybe they still offer some information. The techniques and methods are the same to inverse what was assumed to be the normalization method, but for typical studies. In bioinformatics, with gene expression data, there is usually more to it, like trimming the bottom and top outliers, and taking the quantile normalization, then scaling. We used the standardization method of normalizing values between 0 and 1 as log2 normalized is to 
+f(x)=log2[(x-min(x))/(max(x)-min(x))]=y and the inverse would be:
+f(y)=2^[y*(max(y)-min(y))+min(y)]=x
+So, there is some logic to this, and at some point rounded values could lose information in the numer of scientific placeholders of precision is used in calculating the inverse of the base 2 log, or the exact values for max and min of X need to be used. Reminder, when I demonstrated this earlier, the method worked using this procedure for 10 values that included a 0 where a small value was added to take the log2 of x=0 without an error, but the exact values were still decimals at the final step. To fix this they were turned to fractions, where the denominator was the max(x), and so each value multiplied by the denominator at that point returned the original x values in our list of 10. When addidng that step to the last step we used on this data to denormalize the data, the values were extremely large, approximately 10^3-10^4 larger. So we stopped before taking the fractional values. We will continue with these genes in our machine learning to see if either set makes good gene targets for pathogenesis of lyme disease by how accurately the classes of: healthy, acute disease, 1 month convalescing or developing antibodies after being given a regimen of antibiotics, and 6 months convalescing after being given antibiotics. This is temporal or time specific data, and there were some discrepencies in the study when being done, because it spanned 2 years, some patients didn't know how long they had it but if they had symptoms they were assumed to be suffering from lyme disease, like the facial paralysis or the skin lesion type marks. Also, some patients dropped out and if the study spanned two years, and only the last 6 months recorded the convalescing at 6 months then the first batches of patients in the acute phase weren't being recorded or they were actually being monitored after six months and up to two years after being given antibiotics. So we can imagine the data might be skewed for these differences or discrepencies. 
+
+Lets write these two tables out to csv files to analyze visually in Tableau.
+```{r}
+write.csv(Lyme11,'LymeDisease_originalValues_foldchages33_medianAndRemoved.csv',row.names=F)
+write.csv(Lyme11[,-c(5,6)],'LymeDisease_originalValues_foldchages33_medianAndRemoved_rm2Summs.csv',row.names=F)
+```
+
+
+```{r}
+write.csv(lymeMx9,"LymeDisease_denormalizedValues_foldchanges40_medianAndRemoved.csv",row.names=F)
+write.csv(lymeMx9[-c(5,6)],"LymeDisease_denormalizedValues_foldchanges40_medianAndRemoved_rm2Summs.csv",row.names=F)
+
+```
+
+Lets also write the Lyme10 and lymeMx8 data frames that we will use in our ML models.
+```{r}
+write.csv(Lyme10,'ML_medDrop_GSE145974_original.csv', row.names = F)
+write.csv(lymeMx8,'ML_medDrop_GSE145974_destandardized.csv',row.names=F)
+```
+
+
+
+Lets start the machine learning by first making the data frames with the class as the output or target feature and the samples as observations and the genes as predictors from both sets separately.
+
+The 40 de-standardized genes will be created first then the 30 original genes that are completely different. Both are the filtered top or bottom 10 genes out of their respective 19526 unique gene sets of each class by fold change of acute/healthy, 1 month/healthy, or 6 months/healthy by medians of their respective class samples.
+
+The destandardized set. Lets just name our data sets something silly to keep track of them. **Dance is the de-standardized set and Stand** is the original log2 normalized set. 
+
+
+The Dance Machine Learning set, made from the lymeMx7, not-tidied, de-standardized data frame:
+```{r}
+colnames(lymeMx7)
+```
+
+Lets remove the fold change and median value features from our lymeMx8 data frame and save it as 'Dance' after we transpose it to get the unique genes as predictors and the samples as observations.
+```{r}
+dance <- lymeMx8[,-c(2:7,88:94)]
+danceSampleNames <- colnames(dance)[2:81]
+
+month1 <- grep('1month',danceSampleNames)
+month6 <- grep('6month',danceSampleNames)
+healthy <- grep('healthy',danceSampleNames)
+acute <- grep('acute',danceSampleNames)
+
+class <- danceSampleNames
+class[month1] <- '1 month'
+class[month6] <- '6 months'
+class[healthy] <- 'healthy'
+class[acute] <- 'acute'
+
+
+danceGeneNames <- dance$gene
+Dance <- as.data.frame(t(dance[,-1]))
+colnames(Dance) <- danceGeneNames
+Dance$class <- class
+Dance2 <- Dance[,c(41,1:40)]
+head(Dance2)
+```
+
+I created a dashboard of the fold change median values across class samples compared to the healthy class, and with the individual samples' gene expression values. This data set has 6 samples removed that skewed the data when looking at mean gene expression values in LymeDiseaseTicks.Rmd, but when looking at the median gene expression values and those other samples removed there are some other samples that also skew the data by median values. clicking a gene in the gene filter and selecting ctrl+clicking each additional gene will display only those gene or genes interested in. Clicking the genes again will display all genes. Lets look through the genes to see what genes show unique or odd behaviors and group them into lists of those genes that have fold change values the same from acute -> 1 month of treatment -> 6 months of treatment compared to the healthy samples. 
+<a href='https://public.tableau.com/profile/janis5126#!/vizhome/dashboardMedDropGSE145974/dashboardMedDropGSE145974?publish=yes' target='blank'>dashboard of median fold change values and 6 samples removed</a>
+
+![dashboard of median fold change values and individual sample values](./images/dashboardMedFCsGSE145974.png)
+
+Figure 10: Dashboard of median fold change values with six samples removed. The individual samples are shown in each class as well as each top or bottom gene in fold change expression of diseased or treated to healthy ratio of medians per class values. There is a gene filter to select each gene interested in. To select more than one gene at a time use ctrl + click on each gene, to remove the selection and return all genes select the selected genes again. Even when removing the six samples that had some different gene behaviors compared to the neighboring samples within each class when using the mean values for fold change values, there are other samples in the median selected sets with odd behaviors as well that could throw off the classification algorithms. This dashboard needs to be looked through to get a list of those samples with odd behaviors and also the genes' fold change values behavior. Such as, monotastically increasing or decreasing from acute ->1 month -> 6 months, or start high, drops low, then shoots really high in gene expression after 6 months of treatment, and other behaviors. They could allow us to zoom in on target genes for lyme disease pathogenesis in these separate classes. 
+
+There are some categories of behaviors. out of three classes of fold change, if you see a low and lowest and high, the low and lowest are closest in gene expression levels lower than the high description. And if you see a high, a highest, and a low then the high and highest are closer in gene expression level higher than the low class. 
+
+up acute:
+
+monotastically decreasing from acute -> 1 month -> 6 months:
+
+BPI
+CA1
+CAMP
+CEACAM8
+CTSG
+DDX3Y
+DEFA4
+EIF1AY
+EPB42
+HBA1
+HBD
+HEMGN
+HIST1H1C
+HIST2H2AA3
+HSPA1B
+KDM5D
+KIR2DS1
+LCN2
+LILRA3
+LTF
+SLC25A37
+ZNF815
+
+
+high, lowest,low:
+SNCA
+CCDC144A
+
+
+highest,low,high:
+CXCL2
+GAL3ST4
+HLA-DRB5
+KRT1
+LGALS2
+
+monotastically increasing from acute -> 1 month -> 6 months:
+ERAP2
+
+
+high, low, highest:
+IL8
+EREG
+IL1B
+OLR1
+POTEB
+
+low, lowest, high:
+TSIX
+XIST
+MYOM2
+FSIP1
+
+low,high,lowest:
+SIRPB1
+
+There are 7 groups: 
+```{r}
+Acute_md <- c('BPI','CA1','CAMP','CEACAM8','CTSG','DDX3Y','DEFA4','EIF1AY','EPB42',
+'HBA1','HBD','HEMGN','HIST1H1C','HIST2H2AA3','HSPA1B','KDM5D','KIR2DS1','LCN2',
+'LILRA3','LTF','SLC25A37','ZNF815')
+HlL <- c('SNCA','CCDC144A')
+Hlh <- c('CXCL2', 'GAL3ST4', 'HLA-DRB5', 'KRT1', 'LGALS2')
+Acute_mi <- 'ERAP2'
+hlH <- c('IL8','EREG','IL1B','OLR1','POTEB')
+lLh <- c('TSIX','XIST','MYOM2','FSIP1')
+lhL <- 'SIRPB1'
+
+```
+
+Now that we have our lists, lets see about those data frames for the seven different groups of gene anomolies or similarities. The following are our ML ready dataframes for our seven groups in our de-standardized Lyme disease data.
+```{r}
+Acute_md_DF <- Dance2[,colnames(Dance2) %in% Acute_md]
+Acute_md_DF$class <- Dance2$class
+
+HlL_DF <- Dance2[,colnames(Dance2) %in% HlL]
+HlL_DF$class <- Dance2$class
+
+Acute_mi_DF <- data.frame(ERAP2=Dance2[,colnames(Dance2) %in% Acute_mi], row.names=row.names(Dance2))
+Acute_mi_DF$class <- Dance2$class
+
+lhL_DF <- data.frame(SIRPB1=Dance2[,colnames(Dance2) %in%  lhL],row.names=row.names(Dance2))
+lhL_DF$class <- Dance2$class
+
+Hlh_DF <- Dance2[,colnames(Dance2) %in% Hlh]
+Hlh_DF$class <- Dance2$class
+
+hlH_DF <- Dance2[,colnames(Dance2) %in% hlH]
+hlH_DF$class <- Dance2$class
+
+lLh_DF <- Dance2[,colnames(Dance2) %in% lLh]
+lLh_DF$class <- Dance2$class
+
+```
+
+Great, now we need to run through each of these 7 data frames and split into separate training and testing sets, and test a machine learning algorithm on. I tend to always use random forest to start with, or caret's rpart. 
+
+Lets make sure we keep the same samples in our testing set and training set for each group to test machine learning algorithm(s) on. Lets keep the standard 70% training set and 30% testing set using a random sampling of our classes.
+```{r}
+set.seed(34567)
+train <- sample(1:80,.7*80)
+training <- class[train]
+testing <- class[-train]
+t <- data.frame(train = training)
+ts <- data.frame(test= testing)
+
+```
+
+
+```{r}
+t %>% group_by(train) %>% count(train)
+```
+
+
+```{r}
+ts %>% group_by(test) %>% count(test)
+```
+
+We can see we have a fair share of samples in our training set and at least one of each class in our testing set to make predictions based on the model we train. Lets keep these same samples in each of our 8 groups to classify with. Lets make our 8 training and testing sets with our indices labeled 'train' and note the numeric labeling of each correspongs to their data frame:
+
+
+Training/Testing split 1: Acute_md_DF
+Training/Testing split 2: HlL_DF 
+Training/Testing split 3: Acute_mi_DF
+Training/Testing split 4: lhL_DF
+Training/Testing split 5: Hlh_DF
+Training/Testing split 6: hlH_DF
+Training/Testing split 7: lLh_DF
+Training/Testing split 8: Dance2
+
+```{r}
+training1 <- Acute_md_DF[train,]
+testing1 <- Acute_md_DF[-train,]
+training2 <- HlL_DF[train,]
+testing2 <- HlL_DF[-train,]
+training3 <- Acute_mi_DF[train,]
+testing3 <- Acute_mi_DF[-train,]
+training4 <- lhL_DF[train,]
+testing4 <- lhL_DF[-train,]
+training5 <- Hlh_DF[train,]
+testing5 <- Hlh_DF[-train,]
+training6 <- hlH_DF[train,]
+testing6 <- hlH_DF[-train,]
+training7 <- lLh_DF[train,]
+testing7 <- lLh_DF[-train,]
+training8 <- Dance2[train,]
+testing8 <- Dance2[-train,]
+
+```
+
+Lets make a function specific to our data frames to return the precision, recall, and accuracy of these four classes. I actually made this in a previous script,monotonicGenes.Rmd, when testing the COVID-19 samples with GSE152418 that also had four classes to classify. But those classes were healthy, moderate, severe, or ICU grades of severity of Covid19. Actually, I found out later, that the convalescent class was its own class even though it was only one sample. So there should have been five classes. But no need to alter that function now. There is also some other packages or in the caret package, that I never use that can return the precision and recall, but i don't think as a confusion matrix. I thought the convalescent class was mislabeled, so had it relabeled as healthy, since the models pedicted it as such. I didn't find out until this study, when the summary of this study, GSE145974, used 'convalesced' blood after 1 and 6 months of antibiotics, that the sample in GSE152418 was likely its own class. I assumed it was  identifying the source of its patient sample,because another previous study on Rheumatoid Arthritis (RA), GSE151161, did use convalescent patients, and it preceded the analysis on GSE152418. Typically in research, you need a client consent and informed consent from people who aren't incarcerated or in the care of another person or facility,because it violates the human research subjects guidelines for ethical research and not victimizing vulnerable populations or culpabe and incoherant populations. This stems from research that was criminal in the Tuskegee hospital on injecting black populations with syphilis or polio vaccines on inmates in other studies for some small reward or break from their punishment or lowered/free cost clinic for medical treatment. Any researcher knows this, especially if they are funded by government agencies. Also, due to the Nazi research done on Jewish victims during World War 2, the Nuremberg Code, was created, as well as later the Belmont report. "The Nuremberg Code states that "the voluntary consent of the human subject is absolutely essential" and it further explains the details implied by this requirement: capacity to consent, freedom from coercion, no penalty for withdrawal, and comprehension of the risks and benefits involved."-The Nuremberg Code, taken from a resource for getting certified in understanding compliance with human research experiments as part of my graduate research project this had to be completed. The agency who provided this, similar to HIPPA compliance for healthcare providers, is <a href='https://about.citiprogram.org/en/homepage/' target='blank'>CITI</a>. 
+
+
+```{r}
+precisionRecallAccuracy <- function(df){
+  
+ colnames(df) <- c('pred','type')
+  df$pred <- as.character(paste(df$pred))
+  df$type <- as.character(paste(df$type))
+  
+ classes <- unique(df$type)
+ 
+ class1a <- as.character(paste(classes[1]))
+ class2a <- as.character(paste(classes[2]))
+ class3a <- as.character(paste(classes[3]))
+ class4a <- as.character(paste(classes[4]))
+ 
+  #correct classes
+  class1 <- subset(df, df$type==class1a)
+  class2 <- subset(df, df$type==class2a)
+  class3 <- subset(df, df$type==class3a)
+  class4 <- subset(df, df$type==class4a)
+  
+  #incorrect classes
+  notClass1 <- subset(df,df$type != class1a)
+  notClass2 <- subset(df,df$type != class2a)
+  notClass3 <- subset(df,df$type != class3a)
+  notClass4 <- subset(df, df$type != class4a)
+  
+  #true positives (real positives predicted positive)
+  tp_1 <- sum(class1$pred==class1$type)
+  tp_2 <- sum(class2$pred==class2$type)
+  tp_3 <- sum(class3$pred==class3$type)
+  tp_4 <- sum(class4$pred==class4$type)
+  
+  #false positives (real negatives predicted positive)
+  fp_1 <- sum(notClass1$pred==class1a)
+  fp_2 <- sum(notClass2$pred==class2a)
+  fp_3 <- sum(notClass3$pred==class3a)
+  fp_4 <- sum(notClass4$pred==class4a)
+  
+  #false negatives (real positive predicted negative)
+  fn_1 <- sum(class1$pred!=class1$type)
+  fn_2 <- sum(class2$pred!=class2$type)
+  fn_3 <- sum(class3$pred!=class3$type)
+  fn_4 <- sum(class4$pred!=class4$type)
+  
+  #true negatives (real negatives predicted negative)
+  tn_1 <- sum(notClass1$pred!=class1a)
+  tn_2 <- sum(notClass2$pred!=class2a)
+  tn_3 <- sum(notClass3$pred!=class3a)
+  tn_4 <- sum(notClass4$pred!=class4a)
+  
+  
+  #precision
+  p1 <- tp_1/(tp_1+fp_1)
+  p2 <- tp_2/(tp_2+fp_2)
+  p3 <- tp_3/(tp_3+fp_3)
+  p4 <- tp_4/(tp_4+fp_4)
+  
+  p1 <- ifelse(p1=='NaN',0,p1)
+  p2 <- ifelse(p2=='NaN',0,p2)
+  p3 <- ifelse(p3=='NaN',0,p3)
+  p4 <- ifelse(p4=='NaN',0,p4)
+  
+  #recall
+  r1 <- tp_1/(tp_1+fn_1)
+  r2 <- tp_2/(tp_2+fn_2)
+  r3 <- tp_3/(tp_3+fn_3)
+  r4 <- tp_4/(tp_4+fn_4)
+  
+  r1 <- ifelse(r1=='NaN',0,r1)
+  r2 <- ifelse(r2=='NaN',0,r2)
+  r3 <- ifelse(r3=='NaN',0,r3)
+  r4 <- ifelse(r4=='NaN',0,r4)
+  
+  #accuracy
+  ac1 <- (tp_1+tn_1)/(tp_1+tn_1+fp_1+fn_1)
+  ac2 <- (tp_2+tn_2)/(tp_2+tn_2+fp_2+fn_2)
+  ac3 <- (tp_3+tn_3)/(tp_3+tn_3+fp_3+fn_3)
+  ac4 <- (tp_4+tn_4)/(tp_4+tn_4+fp_4+fn_4)
+  
+  table <- as.data.frame(rbind(c(class1a,p1,r1,ac1),
+                         c(class2a,p2,r2,ac2),
+                         c(class3a,p3,r3,ac3),
+                         c(class4a,p4,r4,ac4)))
+  
+  colnames(table) <- c('class','precision','recall','accuracy')
+  acc <- (sum(df$pred==df$type)/length(df$type))*100
+  cat('accuracy is: ',as.character(paste(acc)),'%')
+  return(table)
+  
+  
+}
+```
+
+
+Lets start with the first group of genes using 
+```{r}
+library(e1071)
+library(caret)
+library(randomForest)
+library(MASS)
+library(gbm)
+library(RANN) #used in the tuning parameter of rf method of caret for 'oob' one out bag
+
+```
+
+Training/Testing 1:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+set.seed(589647)
+rfMod1 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training1),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF1 <- predict(rfMod1, testing1)
+
+predDF1 <- data.frame(predRF1, type=testing1$class)
+predDF1
+```
+
+
+```{r}
+pra1 <- precisionRecallAccuracy(predDF1)
+pra1
+```
+
+
+That set wasn't so great. Lets run through the other 7 sets using the same format and compare the results at the end.
+
+Training/Testing 2:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod2 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training2),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF2 <- predict(rfMod2, testing2)
+
+predDF2 <- data.frame(predRF2, type=testing2$class)
+predDF2
+```
+
+
+```{r}
+pra2 <- precisionRecallAccuracy(predDF2)
+pra2
+```
+
+
+Training/Testing 3:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod3 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training3),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF3 <- predict(rfMod3, testing3)
+
+predDF3 <- data.frame(predRF3, type=testing3$class)
+predDF3
+```
+
+
+```{r}
+pra3 <- precisionRecallAccuracy(predDF3)
+pra3
+```
+
+
+Training/Testing 4:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod4 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training4),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF4 <- predict(rfMod4, testing4)
+
+predDF4 <- data.frame(predRF4, type=testing4$class)
+predDF4
+```
+
+
+```{r}
+pra4 <- precisionRecallAccuracy(predDF4)
+pra4
+```
+
+
+Training/Testing 5:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod5 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training5),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF5 <- predict(rfMod5, testing5)
+
+predDF5 <- data.frame(predRF5, type=testing5$class)
+predDF5
+```
+
+
+```{r}
+pra5 <- precisionRecallAccuracy(predDF5)
+pra5
+```
+
+
+Training/Testing 6:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod6 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training6),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF6 <- predict(rfMod6, testing6)
+
+predDF6 <- data.frame(predRF6, type=testing6$class)
+predDF6
+```
+
+
+```{r}
+pra6 <- precisionRecallAccuracy(predDF6)
+pra6
+```
+
+
+Training/Testing 7:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod7 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training7),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF7 <- predict(rfMod7, testing7)
+
+predDF7 <- data.frame(predRF7, type=testing7$class)
+predDF7
+```
+
+
+```{r}
+pra7 <- precisionRecallAccuracy(predDF1)
+pra7
+```
+
+
+Training/Testing 8:
+```{r, error=FALSE, message=FALSE, warning=FALSE}
+rfMod8 <- train(class~., method='rf', 
+               na.action=na.pass,
+               data=(training8),  preProc = c("center", "scale","medianImpute"),
+               trControl=trainControl(method='oob'), number=5)
+```
+
+
+```{r}
+predRF8 <- predict(rfMod8, testing8)
+
+predDF8 <- data.frame(predRF8, type=testing8$class)
+predDF8
+```
+
+
+```{r}
+pra8 <- precisionRecallAccuracy(predDF1)
+pra8
+```
+
+ 
+These are the groups by gene behaviors in fold change of diseased or treated median values compared to healthy median values:
+
+Training/Testing split 1: Acute_md_DF
+Training/Testing split 2: HlL_DF 
+Training/Testing split 3: Acute_mi_DF
+Training/Testing split 4: lhL_DF
+Training/Testing split 5: Hlh_DF
+Training/Testing split 6: hlH_DF
+Training/Testing split 7: lLh_DF
+Training/Testing split 8: Dance2
+
+```{r}
+pra_all <- rbind(pra1,pra2,pra3,pra4,pra5,pra6,pra7,pra8)
+pra_all$GroupMembership <- c(rep(1,4),
+                             rep(2,4),
+                             rep(3,4),
+                             rep(4,4),
+                             rep(5,4),
+                             rep(6,4),
+                             rep(7,4),
+                             rep(8,4))
+pra_all2 <- pra_all %>% group_by(class) %>% mutate(max=
+                  ifelse(accuracy==max(as.numeric(paste(accuracy))),'max','not max'))
+max <- subset(pra_all2, pra_all2$max=='max')
+max
+```
+
+All groups, except group 5 (the highest, low, high genes for acute, 1 month, and 6 months as classes), had a score in the best accuracy of a class. None of the groups predicted a 6 month class, but they all scored 83% accuracy and 0% accuracy for precision and recall because of not selecting it as a class for groups 2,3,4, and 6. Groups 1 and 7 scored the same in accuracy, precision, and recall in predicting the healthy and acute classes. Group 8 scored the same as group 1 and 7 in the healthy class , but that was the only class group 8 predicted with the best in accuracy.Only Group 4 predicted the 1 month class the best with 30% precision and 60% recall for an accuracy of 63%. The overall accuracy was worse with this set of median samples as the best was 34% accuracy (Groups 1,2,7, and 8) and worst was 21% accuracy (Group 5).
+
+We can't remove any samples, not because we already removed 6 from the 86 total before getting the class median sample values for the fold change values, but because looking at the 40 genes and the samples within each class, there are many samples with different values differing from their neighbors dramatically or not. We can see if scaling the training set in the model training will help. It will center and scale the data for us with that step I commented out in the last model prediction runs.
+
+
+Lets use the randomForest package and its randomForest() to tune our model and test our same 8 groups.
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training1) <- gsub('-','',colnames(training1))
+colnames(testing1) <- gsub('-','',colnames(testing1))
+testing1$class <- as.factor(paste(testing1$class))
+training1$class <- as.factor(paste(training1$class))
+RF1 <- randomForest(class ~ ., data=training1, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict1 <- predict(RF1,testing1)
+predict1df <- data.frame(predict1, type=testing1$class)
+predict1df
+
+```
+
+
+```{r}
+PRA1 <- precisionRecallAccuracy(predict1df)
+PRA1
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training2) <- gsub('-','',colnames(training2))
+colnames(testing2) <- gsub('-','',colnames(testing2))
+testing2$class <- as.factor(paste(testing2$class))
+training2$class <- as.factor(paste(training2$class))
+RF2 <- randomForest(class ~ ., data=training2, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict2 <- predict(RF2,testing2)
+predict2df <- data.frame(predict2, type=testing2$class)
+predict2df
+
+```
+
+
+```{r}
+PRA2 <- precisionRecallAccuracy(predict2df)
+PRA2
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training3) <- gsub('-','',colnames(training3))
+colnames(testing3) <- gsub('-','',colnames(testing3))
+testing3$class <- as.factor(paste(testing3$class))
+training3$class <- as.factor(paste(training3$class))
+RF3 <- randomForest(class ~ ., data=training3, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict3 <- predict(RF3,testing3)
+predict3df <- data.frame(predict3, type=testing3$class)
+predict3df
+
+```
+
+
+```{r}
+PRA3 <- precisionRecallAccuracy(predict3df)
+PRA3
+```
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training4) <- gsub('-','',colnames(training4))
+colnames(testing4) <- gsub('-','',colnames(testing4))
+testing4$class <- as.factor(paste(testing4$class))
+training4$class <- as.factor(paste(training4$class))
+RF4 <- randomForest(class ~ ., data=training4, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict4 <- predict(RF4,testing4)
+predict4df <- data.frame(predict4, type=testing4$class)
+predict4df
+
+```
+
+
+```{r}
+PRA4 <- precisionRecallAccuracy(predict4df)
+PRA4
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training5) <- gsub('-','',colnames(training5))
+colnames(testing5) <- gsub('-','',colnames(testing5))
+testing5$class <- as.factor(paste(testing5$class))
+training5$class <- as.factor(paste(training5$class))
+RF5 <- randomForest(class ~ ., data=training5, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict5 <- predict(RF5,testing5)
+predict5df <- data.frame(predict5, type=testing5$class)
+predict5df
+
+```
+
+
+```{r}
+PRA5 <- precisionRecallAccuracy(predict5df)
+PRA5
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training6) <- gsub('-','',colnames(training6))
+colnames(testing6) <- gsub('-','',colnames(testing6))
+testing6$class <- as.factor(paste(testing6$class))
+training6$class <- as.factor(paste(training6$class))
+RF6 <- randomForest(class ~ ., data=training6, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict6 <- predict(RF6,testing6)
+predict6df <- data.frame(predict6, type=testing6$class)
+predict6df
+
+```
+
+
+```{r}
+PRA6 <- precisionRecallAccuracy(predict6df)
+PRA6
+```
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training7) <- gsub('-','',colnames(training7))
+colnames(testing7) <- gsub('-','',colnames(testing7))
+testing7$class <- as.factor(paste(testing7$class))
+training7$class <- as.factor(paste(training7$class))
+RF7 <- randomForest(class ~ ., data=training7, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict7 <- predict(RF7,testing7)
+predict7df <- data.frame(predict7, type=testing7$class)
+predict7df
+
+```
+
+
+```{r}
+PRA7 <- precisionRecallAccuracy(predict7df)
+PRA7
+```
+
+
+```{r}
+#an error with hyphen in HLA-DRB4, so we will omit it in the testing and training set
+set.seed(4567)
+colnames(training8) <- gsub('-','',colnames(training8))
+colnames(testing8) <- gsub('-','',colnames(testing8))
+testing8$class <- as.factor(paste(testing8$class))
+training8$class <- as.factor(paste(training8$class))
+RF8 <- randomForest(class ~ ., data=training8, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict8 <- predict(RF8,testing8)
+predict8df <- data.frame(predict8, type=testing8$class)
+predict8df
+
+```
+
+
+```{r}
+PRA8 <- precisionRecallAccuracy(predict8df)
+PRA8
+```
+
+```{r}
+PRA_all <- rbind(PRA1,PRA2,PRA3,PRA4,PRA5,PRA6,PRA7,PRA8)
+PRA_all$groupMembership <- c(rep(1,4),
+                             rep(2,4),
+                             rep(3,4),
+                             rep(4,4),
+                             rep(5,4),
+                             rep(6,4),
+                             rep(7,4),
+                             rep(8,4))
+PRA_all2 <- PRA_all %>% group_by(class) %>% mutate(max=
+    ifelse(accuracy==max(as.numeric(paste(accuracy))),'max','not max'))
+max2 <- subset(PRA_all2, PRA_all2$max=='max')
+max2
+```
+
+
+We see that there are less groups that got the best class prediction accuracy than when we didn't scale or center the data, and that group 2 predicted the healthy class with the same accuracy as groups 4, 5, and 7, but with both a higher precision and recall. Group 2 also predicted the 1 month and 6 month classes with the best accuracy. The 6 month class was still not used by any group to classify any testing samples in our random forest model. but not selecting the 6 month group gave an 88% accuracy, but both group 8 and 2 scored 0% for recall and precision for that. Only Group 1 predicted the acute class with the max accuracy of 67% having a precision of 80% (classified about 4/5 acute samples) and a recall of 37% (some irrelevant records classified as acute). The range of accuracy overall was 21%-42%. Group 2 scored the highest accuracy in prediction, with Group 3 scoring the lowest with this random forest model.
+
+
+At this point lets take those genes that are in the best predicting classes of gene groups and use it as one data frame. Groups 1,2,4, and 7 are the better gene groups. Lets combine those into one group.
+```{r}
+Training1247 <- training8[,colnames(training8) %in% c(Acute_md,HlL_DF,lhL_DF,lLh_DF)]
+Training1247$class <- training8$class
+Testing1247 <-   testing8[,colnames(training8) %in% c(Acute_md,HlL_DF,lhL_DF,lLh_DF)]
+Testing1247$class <- testing8$class
+```
+
+
+```{r}
+colnames(Training1247)
+```
+
+
+```{r}
+colnames(Testing1247)
+```
+
+
+```{r}
+colnames(Testing1247)==colnames(Training1247)
+```
+
+The same genes are in each of our better genes data frame for the testing and training sets. Now lets see how the last model does on prediction with these genes. 
+
+```{r}
+RF1247 <- randomForest(class ~ ., data=Training1247, 
+                    importance=TRUE, nodesize=2, ntree=400,mtry=3)
+```
+
+
+```{r}
+predict1247 <- predict(RF1247,Testing1247)
+predict1247df <- data.frame(predict1247, type=Testing1247$class)
+predict1247df
+
+```
+
+
+```{r}
+PRA1247 <- precisionRecallAccuracy(predict1247df)
+PRA1247
+
+```
+
+The overall accuracy was 37.5% or about 9/24 correct for four classes. So that's better than 25% or 1/4 chances of predicting accurately. The accuracy for each of the classes was 79% for the healthy class, 71% for the acute class, 46% for the 1 month class, and 79% for the 6 month class. With the highest precision in predicting the acute class, and highest recall in predicting the healthy class. 
+It predicted more healthy classes correctly and only misclassified 40% for a recall of 60%, and predicted 83% of the acute classes only missing 17% of the other acute classes in the testing set. 
+
+At this point I don't think tuning the model will allow it to perform better. We can use other algorithms on the entire data or this set. 
+```{r}
+
+knnMod0 <- train(class ~ .,
+                method='knn', preProcess=c('center','scale'),
+                tuneLength=10, trControl=trainControl(method='adaptive_cv'),
+                data=Training1247)
+
+```
+
+
+```{r}
+predKNN0 <- predict(knnMod0, Testing1247)
+dfKNN0 <- data.frame(KNN=predKNN0, class=Testing1247$class)
+dfKNN0
+
+precisionRecallAccuracy(dfKNN0)
+
+```
+
+The K-Nearest Neighbor algorithm also scored 37.5%, with the best accuracy in prediction for the healthy class, with 87.5% accuracy, 67% precision, and 80% recall. The acute class scored 67% accuracy but had an 80% precision and 37% recall. 
+
+
+
+```{r,eval=FALSE}
+rpartMod0 <- train(class ~ ., method='rpart', tuneLength=7, data=Training1247) 
+
+```
+
+```{r,eval=FALSE}
+predRPART0 <- predict(rpartMod0, Testing1247)
+dfRPART0 <- data.frame(Rpart=predRPART0, class=Testing1247$class)
+dfRPART0
+
+precisionRecallAccuracy(dfRPART0)
+
+```
+
+The rpart algorithm only scored 21% accuracy overall, and didn't predict any of the healthy,acute, or 6 month classes correctly as the precision and recall are both 0% for those clases, but the accuracy was 79% for the healthy class, 54% for the acute class, and 88% for the 6 months class. This model scored 21% precision on the 1 month class and 100% recall for the same class. that is less than the probability of 1/4 correct or 25% in accuracy overall. This model would not be a good fit for this data or could be tuned. Doubtful it will improve much or any other model. The underlying data seems to be bad. These genes aren't able to predict out of all these classes in overall accuracy better than 42% accuracy using the median fold change values to gather our genes. We could try separating the classes and seeing in pairs if the models will predict better accuracy. If we exclude the antibiotic treatment classes, can we get good prediction accuracy?
+
+
+
+
+

@@ -316,8 +316,102 @@ getSummaries2 <- function(gene,protein){
   write.csv(names,paste('geneHeader_summary_',protein2,'.csv',sep=''),row.names=FALSE)
   
   setwd('../')
+  
   return(gene)
 }
 
 
 
+
+# from the monotonicGenes.Rmd of GSE152418 analysis on COVID-19
+# tests four classees for accuracy returning precision and recall and accuracy
+precisionRecallAccuracy <- function(df){
+  
+  colnames(df) <- c('pred','type')
+  df$pred <- as.character(paste(df$pred))
+  df$type <- as.character(paste(df$type))
+  
+  classes <- unique(df$type)
+  
+  class1a <- as.character(paste(classes[1]))
+  class2a <- as.character(paste(classes[2]))
+  class3a <- as.character(paste(classes[3]))
+  class4a <- as.character(paste(classes[4]))
+  
+  #correct classes
+  class1 <- subset(df, df$type==class1a)
+  class2 <- subset(df, df$type==class2a)
+  class3 <- subset(df, df$type==class3a)
+  class4 <- subset(df, df$type==class4a)
+  
+  #incorrect classes
+  notClass1 <- subset(df,df$type != class1a)
+  notClass2 <- subset(df,df$type != class2a)
+  notClass3 <- subset(df,df$type != class3a)
+  notClass4 <- subset(df, df$type != class4a)
+  
+  #true positives (real positives predicted positive)
+  tp_1 <- sum(class1$pred==class1$type)
+  tp_2 <- sum(class2$pred==class2$type)
+  tp_3 <- sum(class3$pred==class3$type)
+  tp_4 <- sum(class4$pred==class4$type)
+  
+  #false positives (real negatives predicted positive)
+  fp_1 <- sum(notClass1$pred==class1a)
+  fp_2 <- sum(notClass2$pred==class2a)
+  fp_3 <- sum(notClass3$pred==class3a)
+  fp_4 <- sum(notClass4$pred==class4a)
+  
+  #false negatives (real positive predicted negative)
+  fn_1 <- sum(class1$pred!=class1$type)
+  fn_2 <- sum(class2$pred!=class2$type)
+  fn_3 <- sum(class3$pred!=class3$type)
+  fn_4 <- sum(class4$pred!=class4$type)
+  
+  #true negatives (real negatives predicted negative)
+  tn_1 <- sum(notClass1$pred!=class1a)
+  tn_2 <- sum(notClass2$pred!=class2a)
+  tn_3 <- sum(notClass3$pred!=class3a)
+  tn_4 <- sum(notClass4$pred!=class4a)
+  
+  
+  #precision
+  p1 <- tp_1/(tp_1+fp_1)
+  p2 <- tp_2/(tp_2+fp_2)
+  p3 <- tp_3/(tp_3+fp_3)
+  p4 <- tp_4/(tp_4+fp_4)
+  
+  p1 <- ifelse(p1=='NaN',0,p1)
+  p2 <- ifelse(p2=='NaN',0,p2)
+  p3 <- ifelse(p3=='NaN',0,p3)
+  p4 <- ifelse(p4=='NaN',0,p4)
+  
+  #recall
+  r1 <- tp_1/(tp_1+fn_1)
+  r2 <- tp_2/(tp_2+fn_2)
+  r3 <- tp_3/(tp_3+fn_3)
+  r4 <- tp_4/(tp_4+fn_4)
+  
+  r1 <- ifelse(r1=='NaN',0,r1)
+  r2 <- ifelse(r2=='NaN',0,r2)
+  r3 <- ifelse(r3=='NaN',0,r3)
+  r4 <- ifelse(r4=='NaN',0,r4)
+  
+  #accuracy
+  ac1 <- (tp_1+tn_1)/(tp_1+tn_1+fp_1+fn_1)
+  ac2 <- (tp_2+tn_2)/(tp_2+tn_2+fp_2+fn_2)
+  ac3 <- (tp_3+tn_3)/(tp_3+tn_3+fp_3+fn_3)
+  ac4 <- (tp_4+tn_4)/(tp_4+tn_4+fp_4+fn_4)
+  
+  table <- as.data.frame(rbind(c(class1a,p1,r1,ac1),
+                               c(class2a,p2,r2,ac2),
+                               c(class3a,p3,r3,ac3),
+                               c(class4a,p4,r4,ac4)))
+  
+  colnames(table) <- c('class','precision','recall','accuracy')
+  acc <- (sum(df$pred==df$type)/length(df$type))*100
+  cat('accuracy is: ',as.character(paste(acc)),'%')
+  return(table)
+  
+  
+}
